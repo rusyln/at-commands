@@ -1,58 +1,140 @@
-import RPi.GPIO as GPIO
+import subprocess
 import time
-import serial
+import sys
+import bluetooth  # Ensure you have pybluez installed to use this library
+import RPi.GPIO as GPIO  # Import RPi.GPIO library
 
-# Set up the GPIO using BCM numbering
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)  # Suppress GPIO warnings
+# Set up GPIO
+LED_PIN = 18          # GPIO pin for the LED
+BUTTON_PIN_23 = 23    # GPIO pin for button to turn on the A9G module
+BUTTON_PIN_24 = 24    # GPIO pin for button to turn on Bluetooth
 
-# Define the GPIO pins
-BUTTON_PIN = 23  # Button connected to GPIO 23
-A9G_PIN = 17     # A9G module control pin (PWR_KEY)
+GPIO.setmode(GPIO.BCM)  # Use BCM pin numbering
+GPIO.setup(LED_PIN, GPIO.OUT)  # Set LED pin as an output
+GPIO.setup(BUTTON_PIN_23, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set button as input with pull-down resistor
+GPIO.setup(BUTTON_PIN_24, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set button as input with pull-down resistor
 
-# Set up GPIO pins
-GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button input
-GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
+def run_bluetoothctl():
+    """Start bluetoothctl as a subprocess and return the process handle."""
+    return subprocess.Popen(
+        ['bluetoothctl'],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1  # Line-buffered
+    )
 
-# Function to turn on the A9G module
-def turn_on_a9g():
-    print("Turning on A9G module...")
-    GPIO.output(A9G_PIN, GPIO.HIGH)  # Set the pin high to turn on the A9G module
-    time.sleep(2)  # Keep it on for 2 seconds (adjust as needed)
-    GPIO.output(A9G_PIN, GPIO.LOW)  # Set the pin low to turn off the A9G module
-    print("A9G module powered on.")
+def run_command(process, command):
+    """Run a command in bluetoothctl."""
+    if process.poll() is None:  # Check if the process is still running
+        print(f"Running command: {command}")
+        process.stdin.write(command + '\n')
+        process.stdin.flush()
+        time.sleep(1)  # Allow some time for processing
+    else:
+        print(f"Process is not running. Unable to execute command: {command}")
 
-# Function to send AT command
-def send_at_command(command):
-    # Open the serial port
-    ser = serial.Serial('/dev/serial0', baudrate=115200, timeout=1)  # Use /dev/serial0
-    time.sleep(2)  # Wait for the serial connection to initialize
-    ser.write((command + '\r\n').encode('utf-8'))  # Send the command
-    time.sleep(1)  # Wait for a response
-    response = ser.read(ser.inWaiting()).decode('utf-8')  # Read the response
-    ser.close()  # Close the serial port
-    return response
+def start_rfcomm_server():
+    """Start RFCOMM server on channel 23."""
+    print("Starting RFCOMM server on channel 23...")
 
-print("Waiting for button press to turn on A9G module and send AT command...")
+    # Create a Bluetooth socket
+    server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+    port = 24
+    server_sock.bind(("", port))
+    server_sock.listen(1)
 
-try:
-    while True:
-        # Check if the button is pressed
-        if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-            print("Button pressed!")
-            turn_on_a9g()  # Call the function to turn on the A9G module
+    print(f"Listening for connections on RFCOMM channel {port}...")
 
-            # Send an AT command after turning on the module
-            at_command = "AT"  # Replace with your desired AT command
-            response = send_at_command(at_command)
-            print(f"Response from A9G module: {response}")
+    try:
+        client_sock, address = server_sock.accept()
+        print("Connection established with:", address)
 
-            time.sleep(0.5)  # Debounce delay to avoid multiple triggers
+        while True:
+            recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
+            print("Received command:", recvdata)
 
-except KeyboardInterrupt:
-    print("Script interrupted by user")
+            if recvdata == "Q":
+                print("Ending connection.")
+                break
+            if recvdata == "socket close":
+                print("Ending connection.")
+                server_sock.close()
+                break   
 
-finally:
-    # Clean up GPIO settings before exiting
-    GPIO.cleanup()
-    print("GPIO cleanup completed")
+            if recvdata == "stop led":
+                print("Turning off the LED.")
+                GPIO.output(LED_PIN, GPIO.LOW)  # Turn off the LED
+                continue
+
+            # Execute the received command
+            try:
+                output = subprocess.check_output(recvdata, shell=True, text=True)
+                print("Command output:", output)  # Print command output for debugging
+                client_sock.send(output.encode('utf-8'))  # Send the output back to the client
+            except subprocess.CalledProcessError as e:
+                error_message = f"Error executing command: {e}\nOutput: {e.output}"
+                print("Error:", error_message)  # Print the error for debugging
+                client_sock.send(error_message.encode('utf-8'))  # Send error message back to client
+
+    except OSError as e:
+        print("Error:", e)
+
+    finally:
+        client_sock.close()
+        server_sock.close()
+        print("Sockets closed.")
+
+def main():
+    print("Waiting for button press to trigger Bluetooth initialization...")
+
+    try:
+        while True:
+            if GPIO.input(BUTTON_PIN_24) == GPIO.HIGH:
+                print("Button on GPIO 24 pressed. Starting Bluetooth initialization...")
+
+                # Start bluetoothctl
+                process = run_bluetoothctl()
+
+                # Power on the Bluetooth adapter
+                print("Powering on the Bluetooth adapter...")
+                run_command(process, "power on")
+
+                # Make the device discoverable
+                print("Making device discoverable...")
+                run_command(process, "discoverable on")
+
+                # Enable the agent
+                print("Enabling agent...")
+                run_command(process, "agent on")
+
+                # Set as default agent
+                print("Setting default agent...")
+                run_command(process, "default-agent")
+
+                # Start device discovery
+                print("Starting device discovery...")
+                run_command(process, "scan on")
+
+                # Start the RFCOMM server
+                start_rfcomm_server()
+
+                # Exit loop once the Bluetooth logic has been handled
+                break
+
+            # Check if button 23 is pressed for A9G module
+            if GPIO.input(BUTTON_PIN_23) == GPIO.HIGH:
+                print("Button on GPIO 23 pressed. Turning on A9G module...")
+
+            time.sleep(0.1)  # Polling delay to avoid high CPU usage
+
+    except KeyboardInterrupt:
+        print("\nExiting...")
+
+    finally:
+        # Cleanup GPIO settings
+        GPIO.cleanup()
+
+if __name__ == "__main__":
+    main()
