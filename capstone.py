@@ -218,8 +218,7 @@ try:
     while True:
         # Check if the button is pressed
         if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-            # Turn on the A9G module
-            turn_on_a9g()
+  
             # Start Bluetooth functionality
             start_bluetooth()
 
