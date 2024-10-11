@@ -29,6 +29,7 @@ def start_rfcomm_server():
         # Create a Bluetooth socket
         server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
         port = 24
+        server_sock.close
         server_sock.bind(("", port))
         server_sock.listen(1)
 
