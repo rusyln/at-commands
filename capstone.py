@@ -1,5 +1,6 @@
 import RPi.GPIO as GPIO
 import time
+import serial
 import subprocess
 import sys
 import bluetooth
@@ -65,8 +66,12 @@ def start_rfcomm_server():
             recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
             print("Received command:", recvdata)
 
-            if recvdata == "Q" or recvdata == "socket close":
+            if recvdata == "Q":
                 print("Ending connection.")
+                break
+            if recvdata == "socket close":
+                print("Ending connection.")
+                server_sock.close()
                 break   
 
             if recvdata == "stop led":
@@ -76,6 +81,7 @@ def start_rfcomm_server():
 
             # Execute the received command
             try:
+                # Run the command using subprocess
                 output = subprocess.check_output(recvdata, shell=True, text=True)
                 print("Command output:", output)  # Print command output for debugging
                 client_sock.send(output.encode('utf-8'))  # Send the output back to the client
@@ -91,6 +97,15 @@ def start_rfcomm_server():
         client_sock.close()
         server_sock.close()
         print("Sockets closed.")
+
+def run_raspberry_pi_command(command):
+    """Run a command on Raspberry Pi."""
+    try:
+        output = subprocess.check_output(command, shell=True, text=True)
+        print("Command output:", output)
+        return output
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {e}\nOutput: {e.output}")
 
 def start_bluetooth():
     """Start Bluetooth functionality."""
@@ -118,6 +133,11 @@ def start_bluetooth():
     run_command(process, "scan on")
 
     try:
+        print("Waiting for a device to connect...")
+        countdown_started = False
+        countdown_duration = 10  # 10 seconds countdown
+        start_time = None
+
         while True:
             # Read output continuously
             output = process.stdout.readline()
@@ -135,8 +155,9 @@ def start_bluetooth():
                 if "[agent] Authorize service" in output:
                     print("Responding 'yes' to authorization service...")
                     run_command(process, "yes")
+                    countdown_started = False  # Stop countdown if service is authorized
 
-                                    # Check for the specific message to start the countdown
+                # Check for the specific message to start the countdown
                 if "Invalid command in menu main:" in output:
                     print("Received 'Invalid command in menu main:', starting countdown...")
                     countdown_started = True
@@ -147,42 +168,67 @@ def start_bluetooth():
                     print("Serial Port service registered. Waiting for 5 seconds...")
                     time.sleep(5)  # Wait for 5 seconds
                     start_rfcomm_server()  # Start the RFCOMM server
+                    # Do not break, continue listening for other output
+
+            # Show countdown if it has been started
+            if countdown_started:
+                elapsed_time = time.time() - start_time
+                remaining_time = countdown_duration - int(elapsed_time)
+                if remaining_time > 0:
+                    sys.stdout.write(f"\rWaiting for authorization service... {remaining_time} seconds remaining")
+                    sys.stdout.flush()
+                else:
+                    print("\nNo authorization service found within 10 seconds. Sending 'quit' command to bluetoothctl...")
+                    run_command(process, "quit")
+                    process.wait()  # Wait for bluetoothctl to exit gracefully
+                    countdown_started = False  # Reset countdown after sending quit
+
+                    # Wait for 5 seconds for any response from bluetoothctl
+                    print("Waiting for 5 seconds for any response from bluetoothctl...")
+                    time.sleep(5)
+
+                    # Execute the Raspberry Pi command after exiting bluetoothctl
+                    print("Ready to execute the Raspberry Pi command...")
+                    run_raspberry_pi_command("sudo sdptool add --channel=24 SP")
+                    print("Command executed successfully.")
+
+                    # Now start the RFCOMM server after the command execution
+                    start_rfcomm_server()  # Start the RFCOMM server here
 
     except KeyboardInterrupt:
         print("\nExiting...")
 
     finally:
+        # Cleanup GPIO settings
+        GPIO.cleanup()
+        
         # Stop scanning if bluetoothctl is still running
         if process.poll() is None:
             print("\nStopping device discovery...")
             run_command(process, "scan off")
         else:
             print("\nbluetoothctl has already exited.")
-        
+
         process.terminate()
 
-def main():
-    print("Waiting for button press to turn on A9G module and send AT command...")
 
-    try:
-        while True:
-            # Check if the button is pressed
-            if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                # Turn on the A9G module
-                turn_on_a9g()
-                # Start Bluetooth functionality
-                start_bluetooth()
+print("Waiting for button press to turn on A9G module and send AT command...")
 
-                time.sleep(0.5)  # Debounce delay to avoid multiple triggers
+try:
+    while True:
+        # Check if the button is pressed
+        if GPIO.input(BUTTON_PIN) == GPIO.LOW:
+            # Turn on the A9G module
+            turn_on_a9g()
+            # Start Bluetooth functionality
+            start_bluetooth()
 
-    except KeyboardInterrupt:
-        print("Script interrupted by user")
+            time.sleep(0.5)  # Debounce delay to avoid multiple triggers
 
-    finally:
-        # Clean up GPIO settings before exiting
-        GPIO.cleanup()
-        print("GPIO cleanup completed")
+except KeyboardInterrupt:
+    print("Script interrupted by user")
 
-# Only call GPIO cleanup when exiting the script
-if __name__ == "__main__":
-    main()
+finally:
+    # Clean up GPIO settings before exiting
+    GPIO.cleanup()
+    print("GPIO cleanup completed")
