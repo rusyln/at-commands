@@ -40,12 +40,7 @@ try:
         # Check if the button is pressed
         if GPIO.input(BUTTON_PIN) == GPIO.LOW:
             print("Button pressed!")
-            turn_on_a9g()  # Call the function to turn on the A9G module
-
-            # Send an AT command after turning on the module
-            at_command = "AT"  # Replace with your desired AT command
-            response = send_at_command(at_command)
-            print(f"Response from A9G module: {response}")
+           
 
             time.sleep(0.5)  # Debounce delay to avoid multiple triggers
 
