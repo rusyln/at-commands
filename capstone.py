@@ -37,7 +37,15 @@ def run_bluetoothctl():
         text=True,
         bufsize=1  # Line-buffered
     )
-
+def run_raspberry_pi_command(command):
+    """Run a command on Raspberry Pi."""
+    try:
+        output = subprocess.check_output(command, shell=True, text=True)
+        print("Command output:", output)
+        return output
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {e}\nOutput: {e.output}")
+        
 def run_command(process, command):
     """Run a command in bluetoothctl."""
     if process.poll() is None:  # Check if the process is still running
