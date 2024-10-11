@@ -6,16 +6,18 @@ import sys
 import bluetooth
 
 # Set up the GPIO using BCM numbering
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)  # Suppress GPIO warnings
+def setup_gpio():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)  # Suppress GPIO warnings
 
-# Define the GPIO pins
-BUTTON_PIN = 23  # Button connected to GPIO 23
-A9G_PIN = 17     # A9G module control pin (PWR_KEY)
+    # Define the GPIO pins
+    global BUTTON_PIN, A9G_PIN
+    BUTTON_PIN = 23  # Button connected to GPIO 23
+    A9G_PIN = 17     # A9G module control pin (PWR_KEY)
 
-# Set up GPIO pins
-GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button input
-GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
+    # Set up GPIO pins
+    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button input
+    GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
 
 # Function to turn on the A9G module
 def turn_on_a9g():
@@ -49,7 +51,7 @@ def run_command(process, command):
 def start_rfcomm_server():
     """Start RFCOMM server on channel 24."""
     print("Starting RFCOMM server on channel 24...")
-
+    
     # Create a Bluetooth socket
     server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
     port = 24
@@ -72,7 +74,7 @@ def start_rfcomm_server():
             if recvdata == "socket close":
                 print("Ending connection.")
                 server_sock.close()
-                break   
+                return  # Return to main loop to wait for button press
 
             if recvdata == "stop led":
                 print("Turning off the LED.")
@@ -215,6 +217,7 @@ def start_bluetooth():
 print("Waiting for button press to turn on A9G module and send AT command...")
 
 try:
+    setup_gpio()  # Set up GPIO pins at the start
     while True:
         # Check if the button is pressed
         if GPIO.input(BUTTON_PIN) == GPIO.LOW:
