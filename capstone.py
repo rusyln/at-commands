@@ -22,9 +22,7 @@ GPIO.setup(BUTTON_PIN_1, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 1 input
 GPIO.setup(BUTTON_PIN_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 2 input
 GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
 
-defimport bluetooth
-import time
-import random
+
 
 def start_rfcomm_server():
     """Start RFCOMM server on a random channel from 23 to 30 if channel 24 is in use."""
