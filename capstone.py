@@ -22,6 +22,10 @@ GPIO.setup(BUTTON_PIN_1, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 1 input
 GPIO.setup(BUTTON_PIN_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 2 input
 GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
 
+defimport bluetooth
+import time
+import random
+
 def start_rfcomm_server():
     """Start RFCOMM server on a random channel from 23 to 30 if channel 24 is in use."""
     server_sock = None
@@ -58,6 +62,7 @@ def start_rfcomm_server():
                 print("Bluetooth error: Address already in use, trying a random port...")
                 # Generate a random port number between 23 and 30
                 port = random.randint(min_port, max_port)
+                time.sleep(1)  # Sleep for a bit before retrying
                 continue  # Retry binding to the new port
             else:
                 print("Bluetooth error:", e)
@@ -76,6 +81,11 @@ def start_rfcomm_server():
                 server_sock.close()
                 print("Server socket closed.")
             
+            # Indicate readiness to accept new connections
+            print("Waiting for button press to turn on A9G module and send AT command...")
+            time.sleep(1)  # Add a slight delay to avoid rapid retrying
+
+
           
 
 
