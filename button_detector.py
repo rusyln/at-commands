@@ -269,5 +269,9 @@ def main():
         GPIO.cleanup()  # Clean up GPIO settings
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     create_database()  # Ensure the database is set up before running
     main()
+=======
+    main()
+>>>>>>> 246146e (f)
