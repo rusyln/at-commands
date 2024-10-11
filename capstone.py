@@ -9,10 +9,13 @@ LED_PIN = 18          # GPIO pin for the LED
 BUTTON_PIN_23 = 23    # GPIO pin for button to turn on the A9G module
 BUTTON_PIN_24 = 24    # GPIO pin for button to turn on Bluetooth
 
+
+
 GPIO.setmode(GPIO.BCM)  # Use BCM pin numbering
 GPIO.setup(LED_PIN, GPIO.OUT)  # Set LED pin as an output
-GPIO.setup(BUTTON_PIN_23, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set button as input with pull-down resistor
-GPIO.setup(BUTTON_PIN_24, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set button as input with pull-down resistor
+GPIO.setup(BUTTON_PIN_23, GPIO.IN)  # Set button pin as input without pull-down
+GPIO.setup(BUTTON_PIN_24, GPIO.IN)  # Set button pin as input without pull-down
+
 
 def run_bluetoothctl():
     """Start bluetoothctl as a subprocess and return the process handle."""
