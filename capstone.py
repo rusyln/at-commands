@@ -25,24 +25,21 @@ GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
 
 
 def start_rfcomm_server():
-    """Start RFCOMM server on a random channel from 23 to 30 if channel 24 is in use."""
+    """Start RFCOMM server on channel 24."""
     server_sock = None
     client_sock = None
-    default_port = 24  # Default port to try
-    min_port = 23      # Minimum port number to try
-    max_port = 30      # Maximum port number to try
+    channel = 24  # Fixed RFCOMM channel
 
     while True:  # Loop to keep the server running
         print("Starting RFCOMM server...")
-        
+
         # Create a Bluetooth socket
         server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        port = default_port  # Start with the default port
 
         try:
-            server_sock.bind(("", port))
+            server_sock.bind(("", channel))
             server_sock.listen(1)
-            print(f"Listening for connections on RFCOMM channel {port}...")
+            print(f"Listening for connections on RFCOMM channel {channel}...")
 
             client_sock, address = server_sock.accept()
             print("Connection established with:", address)
@@ -57,11 +54,9 @@ def start_rfcomm_server():
 
         except bluetooth.btcommon.BluetoothError as e:
             if e.errno == 98:  # Address already in use
-                print("Bluetooth error: Address already in use, trying a random port...")
-                # Generate a random port number between 23 and 30
-                port = random.randint(min_port, max_port)
+                print("Bluetooth error: Address already in use. Please ensure sdptool has the correct channel set.")
                 time.sleep(1)  # Sleep for a bit before retrying
-                continue  # Retry binding to the new port
+                continue  # Retry binding to the same port
             else:
                 print("Bluetooth error:", e)
                 time.sleep(1)
@@ -82,9 +77,6 @@ def start_rfcomm_server():
             # Indicate readiness to accept new connections
             print("Waiting for button press to turn on A9G module and send AT command...")
             time.sleep(1)  # Add a slight delay to avoid rapid retrying
-
-
-          
 
 
 def turn_on_a9g():
