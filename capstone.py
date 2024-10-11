@@ -69,25 +69,33 @@ def start_rfcomm_server():
     print(f"Listening for connections on RFCOMM channel {port}...")
 
     try:
-        client_sock, address = server_sock.accept()
-        print("Connection established with:", address)
-
         while True:
-            recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
-            print("Received command:", recvdata)
+            client_sock, address = server_sock.accept()
+            print("Connection established with:", address)
 
-            if recvdata == "Q" or recvdata == "socket close":
-                print("Ending connection.")
-                break
-            # Add additional conditions for different commands here
+            try:
+                while True:
+                    recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
+                    print("Received command:", recvdata)
 
-    except OSError as e:
-        print("Error:", e)
+                    if recvdata == "Q" or recvdata == "socket close":
+                        print("Ending connection.")
+                        break  # Exit the inner loop to close the client socket
+
+            except OSError as e:
+                print("Error:", e)
+
+            finally:
+                client_sock.close()
+                print("Client socket closed. Waiting for a new connection...")
+
+    except KeyboardInterrupt:
+        print("\nExiting RFCOMM server due to user interruption.")
 
     finally:
-        client_sock.close()
         server_sock.close()
-        print("Sockets closed.")
+        print("Server socket closed.")
+
 
 def start_bluetooth():
     """Start Bluetooth functionality."""
@@ -223,3 +231,4 @@ except KeyboardInterrupt:
 finally:
     GPIO.cleanup()
     print("GPIO cleanup completed")
+
