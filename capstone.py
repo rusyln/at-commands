@@ -23,19 +23,22 @@ GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
 
 def start_rfcomm_server():
     """Start RFCOMM server on channel 24."""
+    server_sock = None
+    client_sock = None
+
     while True:  # Loop to keep the server running
         print("Starting RFCOMM server on channel 24...")
-
+        
         # Create a Bluetooth socket
         server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
         port = 24
-        server_sock.close
-        server_sock.bind(("", port))
-        server_sock.listen(1)
 
-        print(f"Listening for connections on RFCOMM channel {port}...")
-
+        # Try to bind to the socket and listen for connections
         try:
+            server_sock.bind(("", port))
+            server_sock.listen(1)
+            print(f"Listening for connections on RFCOMM channel {port}...")
+
             client_sock, address = server_sock.accept()
             print("Connection established with:", address)
 
@@ -47,18 +50,27 @@ def start_rfcomm_server():
                     print("Ending connection.")
                     break  # Break from the inner while loop to close the client socket
 
+        except bluetooth.btcommon.BluetoothError as e:
+            print("Bluetooth error:", e)
+            # Wait a moment before retrying, to avoid busy looping
+            time.sleep(1)
+
         except OSError as e:
-            print("Error:", e)
+            print("OS error:", e)
+            time.sleep(1)
 
         finally:
+            # Ensure sockets are closed
             if client_sock:
                 client_sock.close()
                 print("Client socket closed.")
-            server_sock.close()
-            print("Sockets closed.")
-            print("Waiting for button press to turn on A9G module and send AT command...")  # Returning to waiting state
-
-
+            if server_sock:
+                server_sock.close()
+                print("Server socket closed.")
+            
+            # Indicate readiness to accept new connections
+            print("Waiting for button press to turn on A9G module and send AT command...")
+            time.sleep(1)  # Add a slight delay to avoid rapid retrying
 def turn_on_a9g():
     print("Turning on A9G module...")
     GPIO.output(A9G_PIN, GPIO.HIGH)  # Set the pin high to turn on the A9G module
