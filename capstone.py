@@ -7,6 +7,7 @@ import bluetooth
 
 # Set up the GPIO using BCM numbering
 GPIO.setmode(GPIO.BCM)
+print("GPIO mode set to BCM")  # Debugging line to confirm mode is set
 GPIO.setwarnings(False)  # Suppress GPIO warnings
 
 # Define the GPIO pins
@@ -229,5 +230,5 @@ except KeyboardInterrupt:
 
 finally:
     # Clean up GPIO settings before exiting
-    GPIO.cleanup()
+
     print("GPIO cleanup completed")
