@@ -21,46 +21,6 @@ GPIO.setup(BUTTON_PIN_1, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 1 input
 GPIO.setup(BUTTON_PIN_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 2 input
 GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
 
-# Create a thread for the RFCOMM server
-rfcomm_thread = threading.Thread(target=start_rfcomm_server)
-rfcomm_thread.start()
-
-def turn_on_a9g():
-    print("Turning on A9G module...")
-    GPIO.output(A9G_PIN, GPIO.HIGH)  # Set the pin high to turn on the A9G module
-    time.sleep(2)  # Keep it on for 2 seconds (adjust as needed)
-    GPIO.output(A9G_PIN, GPIO.LOW)  # Set the pin low to turn off the A9G module
-    print("A9G module powered on.")
-
-def run_bluetoothctl():
-    """Start bluetoothctl as a subprocess and return the process handle."""
-    return subprocess.Popen(
-        ['bluetoothctl'],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1  # Line-buffered
-    )
-def run_raspberry_pi_command(command):
-    """Run a command on Raspberry Pi."""
-    try:
-        output = subprocess.check_output(command, shell=True, text=True)
-        print("Command output:", output)
-        return output
-    except subprocess.CalledProcessError as e:
-        print(f"Error executing command: {e}\nOutput: {e.output}")
-        
-def run_command(process, command):
-    """Run a command in bluetoothctl."""
-    if process.poll() is None:  # Check if the process is still running
-        print(f"Running command: {command}")
-        process.stdin.write(command + '\n')
-        process.stdin.flush()
-        time.sleep(1)  # Allow some time for processing
-    else:
-        print(f"Process is not running. Unable to execute command: {command}")
-
 def start_rfcomm_server():
     """Start RFCOMM server on channel 24."""
     while True:  # Loop to keep the server running
@@ -97,6 +57,43 @@ def start_rfcomm_server():
             print("Sockets closed.")
             print("Waiting for button press to turn on A9G module and send AT command...")  # Returning to waiting state
 
+
+def turn_on_a9g():
+    print("Turning on A9G module...")
+    GPIO.output(A9G_PIN, GPIO.HIGH)  # Set the pin high to turn on the A9G module
+    time.sleep(2)  # Keep it on for 2 seconds (adjust as needed)
+    GPIO.output(A9G_PIN, GPIO.LOW)  # Set the pin low to turn off the A9G module
+    print("A9G module powered on.")
+
+def run_bluetoothctl():
+    """Start bluetoothctl as a subprocess and return the process handle."""
+    return subprocess.Popen(
+        ['bluetoothctl'],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1  # Line-buffered
+    )
+
+def run_raspberry_pi_command(command):
+    """Run a command on Raspberry Pi."""
+    try:
+        output = subprocess.check_output(command, shell=True, text=True)
+        print("Command output:", output)
+        return output
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {e}\nOutput: {e.output}")
+        
+def run_command(process, command):
+    """Run a command in bluetoothctl."""
+    if process.poll() is None:  # Check if the process is still running
+        print(f"Running command: {command}")
+        process.stdin.write(command + '\n')
+        process.stdin.flush()
+        time.sleep(1)  # Allow some time for processing
+    else:
+        print(f"Process is not running. Unable to execute command: {command}")
 
 def start_bluetooth():
     """Start Bluetooth functionality."""
@@ -212,6 +209,10 @@ def handle_button_2_press():
     """Handle the action for button 2 press."""
     print("Button 2 pressed: Turning on the A9G module...")
     turn_on_a9g()
+
+# Create a thread for the RFCOMM server
+rfcomm_thread = threading.Thread(target=start_rfcomm_server)
+rfcomm_thread.start()
 
 # Main loop to monitor button presses
 print("Waiting for button press to trigger actions...")
