@@ -9,13 +9,11 @@ LED_PIN = 18          # GPIO pin for the LED
 BUTTON_PIN_23 = 23    # GPIO pin for button to turn on the A9G module
 BUTTON_PIN_24 = 24    # GPIO pin for button to turn on Bluetooth
 
-
-
+# Initialize GPIO
 GPIO.setmode(GPIO.BCM)  # Use BCM pin numbering
 GPIO.setup(LED_PIN, GPIO.OUT)  # Set LED pin as an output
-GPIO.setup(BUTTON_PIN_23, GPIO.IN)  # Set button pin as input without pull-down
-GPIO.setup(BUTTON_PIN_24, GPIO.IN)  # Set button pin as input without pull-down
-
+GPIO.setup(BUTTON_PIN_23, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Button input with pull-down resistor
+GPIO.setup(BUTTON_PIN_24, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Button input with pull-down resistor
 
 def run_bluetoothctl():
     """Start bluetoothctl as a subprocess and return the process handle."""
@@ -39,8 +37,8 @@ def run_command(process, command):
         print(f"Process is not running. Unable to execute command: {command}")
 
 def start_rfcomm_server():
-    """Start RFCOMM server on channel 23."""
-    print("Starting RFCOMM server on channel 23...")
+    """Start RFCOMM server on channel 24."""
+    print("Starting RFCOMM server on channel 24...")
 
     # Create a Bluetooth socket
     server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
@@ -94,6 +92,10 @@ def main():
 
     try:
         while True:
+            # Debug statement to monitor button states
+            print(f"Button 23 state: {GPIO.input(BUTTON_PIN_23)}, Button 24 state: {GPIO.input(BUTTON_PIN_24)}")
+
+            # Check if button on GPIO 24 is pressed for Bluetooth initialization
             if GPIO.input(BUTTON_PIN_24) == GPIO.HIGH:
                 print("Button on GPIO 24 pressed. Starting Bluetooth initialization...")
 
@@ -123,10 +125,9 @@ def main():
                 # Start the RFCOMM server
                 start_rfcomm_server()
 
-                # Exit loop once the Bluetooth logic has been handled
-                break
+                break  # Exit loop once Bluetooth logic is handled
 
-            # Check if button 23 is pressed for A9G module
+            # Check if button on GPIO 23 is pressed for A9G module
             if GPIO.input(BUTTON_PIN_23) == GPIO.HIGH:
                 print("Button on GPIO 23 pressed. Turning on A9G module...")
 
@@ -136,8 +137,7 @@ def main():
         print("\nExiting...")
 
     finally:
-        # Cleanup GPIO settings
-        GPIO.cleanup()
+        GPIO.cleanup()  # Cleanup GPIO settings
 
 if __name__ == "__main__":
     main()
