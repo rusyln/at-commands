@@ -232,10 +232,11 @@ def start_bluetooth():
 def handle_button_1_press():
     """Handle the action for button 1 press."""
     print("Button 1 pressed: Initiating Bluetooth sequence...")
-    GPIO.output(LED_BLUE, GPIO.LOW)  # Turn off the LED when button 1 is pressed
-    start_bluetooth()
+    GPIO.output(LED_PIN, GPIO.LOW)  # Turn off the LED when button 1 is pressed
     GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn the LED back on after the Bluetooth sequence ends
 
+    start_bluetooth()
+   
 def handle_button_2_press():
     """Handle the action for button 2 press."""
     print("Button 2 pressed: Turning on the A9G module...")
