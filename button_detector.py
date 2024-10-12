@@ -210,13 +210,16 @@ def start_rfcomm_server():
             if recvdata == "send contact file":
                 print("Sending Contacts.txt file...")
                 try:
-                    with open("Contacts.txt", "r") as file:
-                        file_content = file.read()
-                        client_sock.sendall(file_content.encode('utf-8') + b"EOF\n")
-                        print("Contacts.txt file sent successfully.")
-                except FileNotFoundError:
-                    client_sock.send("Error: Contacts.txt not found.".encode('utf-8'))
-                continue
+                    with open("Contacts.txt", "r") as f:
+                        for line in f:
+                            client_sock.send(line.encode('utf-8'))  # Send line by line
+                    client_sock.send("EOF".encode('utf-8'))  # Indicate end of file
+                    print("Contacts.txt sent successfully.")
+                except Exception as e:
+                    print(f"Failed to send Contacts.txt: {e}")
+                    client_sock.send(f"Error sending file: {str(e)}".encode('utf-8'))
+
+
 
             # Execute the received command (this is for commands that are not predefined)
             try:
