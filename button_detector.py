@@ -1,5 +1,8 @@
 import RPi.GPIO as GPIO
 import time
+import subprocess
+import sys
+import bluetooth 
 
 # Define GPIO pins
 BUTTON_PIN_1 = 23  # Button 1 connected to GPIO 23 (Bluetooth)
@@ -15,13 +18,125 @@ def setup_gpio():
     GPIO.setup(LED_PIN, GPIO.OUT)                                 # Green LED as output
     GPIO.setup(LED_BLUE, GPIO.OUT)                               # Blue LED as output
 
+
+def manage_bluetooth_connection():
+    """Start bluetoothctl, manage commands, and handle device connections."""
+    # Start bluetoothctl as a subprocess
+    process = subprocess.Popen(
+        ['bluetoothctl'],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1  # Line-buffered
+    )
+
+    commands = [
+        ("Powering on the Bluetooth adapter...", "power on"),
+        ("Making device discoverable...", "discoverable on"),
+        ("Enabling agent...", "agent on"),
+        ("Setting default agent...", "default-agent"),
+        ("Starting device discovery...", "scan on")
+    ]
+
+    for message, command in commands:
+        print(message)
+        if process.poll() is None:  # Check if the process is still running
+            process.stdin.write(command + '\n')
+            process.stdin.flush()
+            time.sleep(1)  # Allow some time for processing
+        else:
+            print(f"Process is not running. Unable to execute command: {command}")
+
+    try:
+        print("Waiting for a device to connect...")
+        countdown_started = False
+        countdown_duration = 10  # 10 seconds countdown
+        start_time = None
+
+        while True:
+            # Read output continuously
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break  # Exit loop if the process is terminated
+            if output:
+                print(f"Output: {output.strip()}")
+
+                # Check for the passkey confirmation prompt
+                if "Confirm passkey" in output:
+                    print("Responding 'yes' to passkey confirmation...")
+                    process.stdin.write("yes\n")
+                    process.stdin.flush()
+
+                # Check for authorization service prompt
+                if "[agent] Authorize service" in output:
+                    print("Responding 'yes' to authorization service...")
+                    process.stdin.write("yes\n")
+                    process.stdin.flush()
+                    countdown_started = False  # Stop countdown if service is authorized
+
+                # Check for the specific message to start the countdown
+                if "Invalid command in menu main:" in output:
+                    print("Received 'Invalid command in menu main:', starting countdown...")
+                    countdown_started = True
+                    start_time = time.time()
+
+                # Check for Serial Port service registration
+                if "Serial Port service registered" in output:
+                    print("Serial Port service registered. Waiting for 5 seconds...")
+                    time.sleep(5)  # Wait for 5 seconds
+                    #start_rfcomm_server()  # Start the RFCOMM server
+                    # Continue listening for other output
+
+            # Show countdown if it has been started
+            if countdown_started:
+                elapsed_time = time.time() - start_time
+                remaining_time = countdown_duration - int(elapsed_time)
+                if remaining_time > 0:
+                    sys.stdout.write(f"\rWaiting for authorization service... {remaining_time} seconds remaining")
+                    sys.stdout.flush()
+                else:
+                    print("\nNo authorization service found within 10 seconds. Sending 'quit' command to bluetoothctl...")
+                    process.stdin.write("quit\n")
+                    process.stdin.flush()
+                    process.wait()  # Wait for bluetoothctl to exit gracefully
+                    countdown_started = False  # Reset countdown after sending quit
+
+                    # Wait for 5 seconds for any response from bluetoothctl
+                    print("Waiting for 5 seconds for any response from bluetoothctl...")
+                    time.sleep(5)
+
+                    # Execute the Raspberry Pi command after exiting bluetoothctl
+                    print("Ready to execute the Raspberry Pi command...")
+                    run_raspberry_pi_command("sudo sdptool add --channel=24 SP")
+                    print("Command executed successfully.")
+                    GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED
+
+                    # Now start the RFCOMM server after the command execution
+                   
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        process.terminate()  # Ensure the process is terminated
+        print("bluetoothctl process terminated.")
+        
+def run_raspberry_pi_command(command):
+    """Run a command on Raspberry Pi."""
+    try:
+        output = subprocess.check_output(command, shell=True, text=True)
+        print("Command output:", output)
+        return output
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {e}\nOutput: {e.output}")
+        
 def detect_button_presses():
     """Detect button presses and handle actions."""
     while True:
         # Check for button press on BUTTON_PIN_1
         if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
           # Add Bluetooth connection logic here
-            print("Button 2 pressed! Initiating A9G module action...")
+            print("Button 1 pressed! Initiating A9G module action...")
             GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on blue LED
             time.sleep(1)  # Delay to avoid multiple triggers
             GPIO.output(LED_BLUE, GPIO.LOW)   # Turn off blue LED
@@ -29,10 +144,10 @@ def detect_button_presses():
 
         # Check for button press on BUTTON_PIN_2
         if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
-            print("Button 1 pressed! Initiating Bluetooth connection...")
+            print("Button 2 pressed! Initiating Bluetooth connection...")
             GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
-            time.sleep(1)  # Delay to avoid multiple triggers
-            GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED
+            manage_bluetooth_connection()
+            
            
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
