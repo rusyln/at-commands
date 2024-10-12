@@ -162,12 +162,12 @@ def request_contacts():
     return ''.join(contacts)
 
 def start_rfcomm_server():
-    """Start RFCOMM server on channel 24."""
-    print("Starting RFCOMM server on channel 24...")
+    """Start RFCOMM server on channel 23."""
+    print("Starting RFCOMM server on channel 23...")
 
     try:
         server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        port = 24
+        port = 23
         server_sock.bind(("", port))
         server_sock.listen(1)
 
