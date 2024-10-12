@@ -128,7 +128,7 @@ def manage_bluetooth_connection():
 
                     # Execute the Raspberry Pi command after exiting bluetoothctl
                     print("Ready to execute the Raspberry Pi command...")
-                    run_raspberry_pi_command("sudo sdptool add --channel=24 SP")
+                    run_raspberry_pi_command("sudo sdptool add --channel=23 SP")
                     print("Command executed successfully.")
                     GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED
                     start_rfcomm_server()
@@ -159,7 +159,7 @@ def start_rfcomm_server():
     # Create a Bluetooth socket
     try:
         server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        port = 24
+        port = 23
 
         # Attempt to bind to the port
         server_sock.bind(("", port))
