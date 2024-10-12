@@ -109,10 +109,9 @@ def start_rfcomm_server():
                 server_sock.close()
                 print("Server socket closed.")
 
-            # Indicate readiness to accept new connections
+            # Return to the main loop to wait for button press
             print("Waiting for button press to turn on A9G module and send AT command...")
-            time.sleep(1)  # Add a slight delay to avoid rapid retrying
-
+            return  # Exit the function and wait for a button press
 
 
 def turn_on_a9g():
