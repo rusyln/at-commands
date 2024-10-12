@@ -120,7 +120,7 @@ def start_bluetooth():
                 else:
                     print("\nCountdown expired. Typing 'quit'...")
                     run_command(process, "quit")  # Automatically send 'quit' command
-                    break  # Exit the while loop after sending the quit command
+                    break  # Exit the while loop
 
         except Exception as e:
             print(f"Error: {e}")
