@@ -20,19 +20,20 @@ def detect_button_presses():
     while True:
         # Check for button press on BUTTON_PIN_1
         if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
-            print("Button 1 pressed! Initiating Bluetooth connection...")
-            GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
-            time.sleep(1)  # Delay to avoid multiple triggers
-            GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED
-            # Add Bluetooth connection logic here
-
-        # Check for button press on BUTTON_PIN_2
-        if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
+          # Add Bluetooth connection logic here
             print("Button 2 pressed! Initiating A9G module action...")
             GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on blue LED
             time.sleep(1)  # Delay to avoid multiple triggers
             GPIO.output(LED_BLUE, GPIO.LOW)   # Turn off blue LED
             # Add A9G module logic here
+
+        # Check for button press on BUTTON_PIN_2
+        if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
+            print("Button 1 pressed! Initiating Bluetooth connection...")
+            GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
+            time.sleep(1)  # Delay to avoid multiple triggers
+            GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED
+           
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
 
