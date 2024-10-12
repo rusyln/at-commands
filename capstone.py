@@ -19,6 +19,9 @@ A9G_PIN = 17       # A9G module control pin (PWR_KEY)
 LED_PIN = 12       # Green LED connected to GPIO 12
 LED_BLUE = 6       # Blue LED connected 
 
+# Global variable to control the blinking
+blinking = False
+
 # Set up GPIO pins
 GPIO.setup(BUTTON_PIN_1, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 1 input
 GPIO.setup(BUTTON_PIN_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 2 input
@@ -31,6 +34,15 @@ GPIO.setup(LED_BLUE, GPIO.OUT)  # LED as output
 GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on the LED
 print("Green LED is ON while waiting for button press.")
 
+
+
+def blink_led(led_pin):
+    """Blink the LED at a regular interval."""
+    while blinking:
+        GPIO.output(led_pin, GPIO.HIGH)
+        time.sleep(0.5)  # LED ON for 0.5 seconds
+        GPIO.output(led_pin, GPIO.LOW)
+        time.sleep(0.5)  # LED OFF for 0.5 seconds
 
 def start_rfcomm_server():
     """Start RFCOMM server on channel 24."""
@@ -51,6 +63,10 @@ def start_rfcomm_server():
 
             client_sock, address = server_sock.accept()
             print("Connection established with:", address)
+            
+            # Stop blinking and turn on the blue LED steadily
+            blinking = False  # Stop the blinking loop
+            GPIO.output(LED_BLUE, GPIO.HIGH)  # Keep the blue LED on
 
             while True:
                 recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
@@ -232,9 +248,13 @@ def start_bluetooth():
 
 def handle_button_1_press():
     """Handle the action for button 1 press."""
+    global blinking
     print("Button 1 pressed: Initiating Bluetooth sequence...")
-    GPIO.output(LED_PIN, GPIO.LOW)  # Turn off the LED when button 1 is pressed
-    GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn the LED back on after the Bluetooth sequence ends
+
+    GPIO.output(LED_PIN, GPIO.LOW)  # Turn off the green LED when button 1 is pressed
+    blinking = True
+    blink_thread = threading.Thread(target=blink_led, args=(LED_BLUE,))
+    blink_thread.start()
 
     start_bluetooth()
    
