@@ -3,6 +3,7 @@ import sys
 import signal
 import subprocess
 import bluetooth
+import os
 import RPi.GPIO as GPIO
 
 # Define GPIO pins
@@ -204,6 +205,18 @@ def start_rfcomm_server():
                 append_to_contacts(recvdata)
                 client_sock.send(f"Number added: {recvdata}".encode('utf-8'))  # Acknowledge the addition
                 continue
+
+            # New code to handle the request for Contact.txt
+            if recvdata == "send contact file":
+                print("Sending Contacts.txt file...")
+                try:
+                    with open("Contacts.txt", "r") as file:
+                        file_content = file.read()
+                        client_sock.sendall(file_content.encode('utf-8') + b"EOF\n")
+                        print("Contacts.txt file sent successfully.")
+                except FileNotFoundError:
+                    client_sock.send("Error: Contacts.txt not found.".encode('utf-8'))
+
 
             # Execute the received command
             try:
