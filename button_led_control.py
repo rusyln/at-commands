@@ -89,6 +89,7 @@ def start_bluetooth():
             output = process.stdout.readline()
             if output == '' and process.poll() is not None:
                 break  # Exit loop if the process is terminated
+            
             if output:
                 print(f"Output: {output.strip()}")
 
