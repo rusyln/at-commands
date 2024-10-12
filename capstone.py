@@ -33,7 +33,8 @@ GPIO.setup(LED_BLUE, GPIO.OUT)  # LED as output
 # Turn on the LED initially to indicate waiting state
 GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on the LED
 print("Green LED is ON while waiting for button press.")
-
+# Global variable to control the RFCOMM server restart
+rfcomm_should_restart = True
 
 
 def blink_led(led_pin):
@@ -46,11 +47,12 @@ def blink_led(led_pin):
 
 def start_rfcomm_server():
     """Start RFCOMM server on channel 24."""
+    global rfcomm_should_restart  # Ensure we are using the global variable
     server_sock = None
     client_sock = None
     channel = 24  # Fixed RFCOMM channel
 
-    while True:  # Loop to keep the server running
+    while rfcomm_should_restart:  # Loop to keep the server running based on the restart condition
         print("Starting RFCOMM server...")
 
         # Create a Bluetooth socket
@@ -68,7 +70,6 @@ def start_rfcomm_server():
             
             GPIO.output(LED_BLUE, GPIO.HIGH)  # Keep the blue LED on
             print("Connection established with:", address)
-   
 
             while True:
                 recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
@@ -76,6 +77,7 @@ def start_rfcomm_server():
 
                 if recvdata.lower() == "q" or recvdata.lower() == "socket close":
                     print("Ending connection.")
+                    rfcomm_should_restart = False  # Prevent the server from restarting automatically
                     break  # Break from the inner while loop to close the client socket
 
                 # Execute the command received from the Android device
@@ -112,7 +114,7 @@ def start_rfcomm_server():
             # Indicate readiness to accept new connections
             print("Waiting for button press to turn on A9G module and send AT command...")
             time.sleep(1)  # Add a slight delay to avoid rapid retrying
-
+            rfcomm_should_restart = False  # Stop the server from restarting automatically
 
 
 def turn_on_a9g():
@@ -260,15 +262,17 @@ def start_bluetooth():
 
 def handle_button_1_press():
     """Handle the action for button 1 press."""
-    global blinking
+    global blinking, rfcomm_should_restart
     print("Button 1 pressed: Initiating Bluetooth sequence...")
 
     GPIO.output(LED_PIN, GPIO.LOW)  # Turn off the green LED when button 1 is pressed
     blinking = True
+    rfcomm_should_restart = True  # Allow the server to restart when button is pressed
     blink_thread = threading.Thread(target=blink_led, args=(LED_BLUE,))
     blink_thread.start()
 
     start_bluetooth()
+
    
 def handle_button_2_press():
     """Handle the action for button 2 press."""
