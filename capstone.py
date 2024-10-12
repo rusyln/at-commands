@@ -282,7 +282,7 @@ def wait_for_button_press():
     print("Waiting for button press to start the RFCOMM server...")
     GPIO.output(LED_BLUE, GPIO.LOW)  # Turn off the LED to indicate readiness
 
-    while GPIO.input(BUTTON_PIN) == GPIO.HIGH:  # Wait for button press
+    while GPIO.input(BUTTON_PIN_1) == GPIO.HIGH:  # Wait for button press
         time.sleep(0.1)
 
     print("Button pressed! Starting the RFCOMM server...")
