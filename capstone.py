@@ -276,23 +276,21 @@ def handle_button_2_press():
 
 
 
-def main():
-    print("Waiting for button press to trigger actions...")
-    try:
-        while True:
-            if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
-                handle_button_1_press()
-                time.sleep(0.5)  # Debounce delay
+# Main loop to monitor button presses
+print("Waiting for button press to trigger actions...")
+try:
+    while True:
+        if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
+            handle_button_1_press()
+            time.sleep(0.5)  # Debounce delay
 
-            if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
-                handle_button_2_press()
-                time.sleep(0.5)  # Debounce delay
+        if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
+            handle_button_2_press()
+            time.sleep(0.5)  # Debounce delay
 
-    except KeyboardInterrupt:
-        print("Script interrupted by user")
+except KeyboardInterrupt:
+    print("Script interrupted by user")
 
-    finally:
-        GPIO.cleanup()
-        print("GPIO cleanup completed")
-        
-        
+finally:
+    GPIO.cleanup()
+    print("GPIO cleanup completed")
