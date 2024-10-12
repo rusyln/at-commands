@@ -118,6 +118,7 @@ def start_bluetooth():
                     sys.stdout.flush()
                 else:
                     print("\nCountdown expired. Continuing to check for output...")
+                    run_command(process, "quit")
 
         except Exception as e:
             print(f"Error: {e}")
