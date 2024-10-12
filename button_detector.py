@@ -20,25 +20,7 @@ def setup_gpio():
     GPIO.setup(LED_PIN, GPIO.OUT)                                 # Green LED as output
     GPIO.setup(LED_BLUE, GPIO.OUT)                               # Blue LED as output
 
-def append_to_contacts(number):
-    """Append the received number to Contacts.txt."""
-    with open('Contacts.txt', 'a') as f:
-        f.write(number + '\n')
-    print(f"Appended to Contacts.txt: {number}")
 
-def edit_contact(old_number, new_number):
-    """Edit an existing contact number in Contacts.txt."""
-    with open('Contacts.txt', 'r') as f:
-        contacts = f.readlines()
-    
-    with open('Contacts.txt', 'w') as f:
-        for contact in contacts:
-            if contact.strip() == old_number:
-                f.write(new_number + '\n')  # Replace with the new number
-                print(f"Edited contact: {old_number} to {new_number}")
-            else:
-                f.write(contact)  # Keep existing contacts
-                
                 
 def manage_bluetooth_connection():
     """Start bluetoothctl, manage commands, and handle device connections."""
@@ -87,7 +69,6 @@ def manage_bluetooth_connection():
                 if "Confirm passkey" in output:
                     print("Responding 'yes' to passkey confirmation...")
                     process.stdin.write("yes\n")
-                    time.sleep(5)
                     process.stdin.flush()
 
                 # Check for authorization service prompt
@@ -154,26 +135,44 @@ def run_raspberry_pi_command(command):
     except subprocess.CalledProcessError as e:
         print(f"Error executing command: {e}\nOutput: {e.output}")
 
+def append_to_contacts(number):
+    with open("Contacts.txt", "a") as f:
+        f.write(number + "\n")
+
+def edit_contact(old_number, new_number):
+    # Read all lines from the contacts file
+    with open("Contacts.txt", "r") as f:
+        lines = f.readlines()
+    
+    # Write back all contacts, replacing the old number with the new number
+    with open("Contacts.txt", "w") as f:
+        for line in lines:
+            if line.strip() == old_number:
+                f.write(new_number + "\n")  # Replace the old number
+            else:
+                f.write(line)  # Keep the original number
+
+def display_contacts():
+    with open("Contacts.txt", "r") as f:
+        contacts = f.readlines()
+    return ''.join(contacts)  # Return all contacts as a string
+
 def start_rfcomm_server():
     """Start RFCOMM server on channel 24."""
     print("Starting RFCOMM server on channel 24...")
 
-    # Create a Bluetooth socket
     try:
         server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        port = 23
-
-        # Attempt to bind to the port
+        port = 24  # Changed to channel 24 for consistency
         server_sock.bind(("", port))
         server_sock.listen(1)
 
         print(f"Listening for connections on RFCOMM channel {port}...")
-
         client_sock, address = server_sock.accept()
         print("Connection established with:", address)
 
         while True:
-            recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
+            recvdata = client_sock.recv(1024).decode('utf-8').strip()
             print("Received command:", recvdata)
 
             if recvdata == "Q":
@@ -181,15 +180,18 @@ def start_rfcomm_server():
                 break
             if recvdata == "socket close":
                 print("Ending connection.")
-                server_sock.close()
                 break   
 
             if recvdata == "stop led":
                 print("Turning off the LED.")
-                GPIO.output(LED_PIN, GPIO.LOW)  # Turn off the LED
+                GPIO.output(LED_PIN, GPIO.LOW)
                 continue
 
-            # Check if the received data is an edit command
+            if recvdata == "show contacts":
+                contacts = display_contacts()
+                client_sock.send(contacts.encode('utf-8'))
+                continue
+
             if recvdata.startswith('edit '):
                 parts = recvdata.split()
                 if len(parts) == 3:
@@ -201,50 +203,31 @@ def start_rfcomm_server():
                     client_sock.send("Invalid edit command format. Use: edit <old_number> <new_number>".encode('utf-8'))
                 continue
 
-            # Check if the received data is a contact number
-            if recvdata.startswith('+') and len(recvdata) >= 10:  # Basic check for a phone number
+            if recvdata.startswith('+') and len(recvdata) >= 10:
                 append_to_contacts(recvdata)
-                client_sock.send(f"Number added: {recvdata}".encode('utf-8'))  # Acknowledge the addition
+                client_sock.send(f"Number added: {recvdata}".encode('utf-8'))
                 continue
 
-            # New code to handle the request for Contact.txt
-            if recvdata == "send contact file":
-                print("Sending Contacts.txt file...")
-                try:
-                    with open("Contacts.txt", "r") as file:
-                        file_content = file.read()
-                        client_sock.sendall(file_content.encode('utf-8') + b"EOF\n")
-                        print("Contacts.txt file sent successfully.")
-                except FileNotFoundError:
-                    client_sock.send("Error: Contacts.txt not found.".encode('utf-8'))
-
-
-            # Execute the received command
             try:
-                # Run the command using subprocess
                 output = subprocess.check_output(recvdata, shell=True, text=True)
-                print("Command output:", output)  # Print command output for debugging
-                client_sock.send(output.encode('utf-8'))  # Send the output back to the client
+                print("Command output:", output)
+                client_sock.send(output.encode('utf-8'))
             except subprocess.CalledProcessError as e:
                 error_message = f"Error executing command: {e}\nOutput: {e.output}"
-                print("Error:", error_message)  # Print the error for debugging
-                client_sock.send(error_message.encode('utf-8'))  # Send error message back to client
+                print("Error:", error_message)
+                client_sock.send(error_message.encode('utf-8'))
 
     except bluetooth.BluetoothError as e:
         print("Bluetooth error occurred:", e)
-        if "[Errno 98] Address already in use" in str(e):
-            print("The address is already in use. Closing the existing socket...")
-            server_sock.close()  # Close the socket if it's already in use
-
     except OSError as e:
         print("OS error occurred:", e)
-
     finally:
         if 'client_sock' in locals():
             client_sock.close()
         if 'server_sock' in locals():
             server_sock.close()
         print("Sockets closed.")
+
         
 def detect_button_presses():
     """Detect button presses and handle actions."""
