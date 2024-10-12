@@ -277,21 +277,18 @@ def handle_button_2_press():
 
 
 
-# Main loop to monitor button presses
-print("Waiting for button press to trigger actions...")
-try:
-    while True:
-        if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
-            handle_button_1_press()
-            time.sleep(0.5)  # Debounce delay
+def wait_for_button_press():
+    """Wait for the button to be pressed to start the RFCOMM server."""
+    print("Waiting for button press to start the RFCOMM server...")
+    GPIO.output(LED_BLUE, GPIO.LOW)  # Turn off the LED to indicate readiness
 
-        if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
-            handle_button_2_press()
-            time.sleep(0.5)  # Debounce delay
+    while GPIO.input(BUTTON_PIN) == GPIO.HIGH:  # Wait for button press
+        time.sleep(0.1)
 
-except KeyboardInterrupt:
-    print("Script interrupted by user")
+    print("Button pressed! Starting the RFCOMM server...")
+    GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on the LED to indicate server is starting
 
-finally:
-    GPIO.cleanup()
-    print("GPIO cleanup completed")
+# Main program loop
+while True:
+    wait_for_button_press()  # Wait for the button press to start the server
+    start_rfcomm_server()  # Start the RFCOMM server when button is pressed
