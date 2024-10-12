@@ -111,6 +111,7 @@ def manage_bluetooth_connection():
                     run_raspberry_pi_command("sudo sdptool add --channel=24 SP")
                     print("Command executed successfully.")
                     GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED
+                    start_rfcomm_server()
 
                     # Now start the RFCOMM server after the command execution
                    
@@ -129,6 +130,58 @@ def run_raspberry_pi_command(command):
         return output
     except subprocess.CalledProcessError as e:
         print(f"Error executing command: {e}\nOutput: {e.output}")
+
+def start_rfcomm_server():
+    """Start RFCOMM server on channel 23."""
+    print("Starting RFCOMM server on channel 23...")
+
+    # Create a Bluetooth socket
+    server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+    port = 24
+    server_sock.bind(("", port))
+    server_sock.listen(1)
+
+    print(f"Listening for connections on RFCOMM channel {port}...")
+
+    try:
+        client_sock, address = server_sock.accept()
+        print("Connection established with:", address)
+
+        while True:
+            recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
+            print("Received command:", recvdata)
+
+            if recvdata == "Q":
+                print("Ending connection.")
+                break
+            if recvdata == "socket close":
+                print("Ending connection.")
+                server_sock.close()
+                break   
+
+            if recvdata == "stop led":
+                print("Turning off the LED.")
+                GPIO.output(LED_PIN, GPIO.LOW)  # Turn off the LED
+                continue
+
+            # Execute the received command
+            try:
+                # Run the command using subprocess
+                output = subprocess.check_output(recvdata, shell=True, text=True)
+                print("Command output:", output)  # Print command output for debugging
+                client_sock.send(output.encode('utf-8'))  # Send the output back to the client
+            except subprocess.CalledProcessError as e:
+                error_message = f"Error executing command: {e}\nOutput: {e.output}"
+                print("Error:", error_message)  # Print the error for debugging
+                client_sock.send(error_message.encode('utf-8'))  # Send error message back to client
+
+    except OSError as e:
+        print("Error:", e)
+
+    finally:
+        client_sock.close()
+        server_sock.close()
+        print("Sockets closed.")
         
 def detect_button_presses():
     """Detect button presses and handle actions."""
