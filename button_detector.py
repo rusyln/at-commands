@@ -72,7 +72,7 @@ def manage_bluetooth_connection():
     try:
         print("Waiting for a device to connect...")
         countdown_started = False
-        countdown_duration = 15  # 10 seconds countdown
+        countdown_duration = 10  # 10 seconds countdown
         start_time = None
 
         while True:
@@ -87,6 +87,7 @@ def manage_bluetooth_connection():
                 if "Confirm passkey" in output:
                     print("Responding 'yes' to passkey confirmation...")
                     process.stdin.write("yes\n")
+                    time.sleep(5)
                     process.stdin.flush()
 
                 # Check for authorization service prompt
@@ -206,23 +207,21 @@ def start_rfcomm_server():
                 client_sock.send(f"Number added: {recvdata}".encode('utf-8'))  # Acknowledge the addition
                 continue
 
-            # Check for command to send the Contacts.txt file
+            # New code to handle the request for Contact.txt
             if recvdata == "send contact file":
                 print("Sending Contacts.txt file...")
                 try:
-                    with open("Contacts.txt", "r") as f:
-                        for line in f:
-                            client_sock.send(line.encode('utf-8'))  # Send line by line
-                    client_sock.send("EOF".encode('utf-8'))  # Indicate end of file
-                    print("Contacts.txt sent successfully.")
-                except Exception as e:
-                    print(f"Failed to send Contacts.txt: {e}")
-                    client_sock.send(f"Error sending file: {str(e)}".encode('utf-8'))
+                    with open("Contacts.txt", "r") as file:
+                        file_content = file.read()
+                        client_sock.sendall(file_content.encode('utf-8') + b"EOF\n")
+                        print("Contacts.txt file sent successfully.")
+                except FileNotFoundError:
+                    client_sock.send("Error: Contacts.txt not found.".encode('utf-8'))
 
 
-
-            # Execute the received command (this is for commands that are not predefined)
+            # Execute the received command
             try:
+                # Run the command using subprocess
                 output = subprocess.check_output(recvdata, shell=True, text=True)
                 print("Command output:", output)  # Print command output for debugging
                 client_sock.send(output.encode('utf-8'))  # Send the output back to the client
@@ -246,7 +245,6 @@ def start_rfcomm_server():
         if 'server_sock' in locals():
             server_sock.close()
         print("Sockets closed.")
-
         
 def detect_button_presses():
     """Detect button presses and handle actions."""
