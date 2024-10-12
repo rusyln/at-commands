@@ -12,6 +12,7 @@ LED_BLUE = 6       # Blue LED connected to GPIO 6
 
 def setup_gpio():
     """Setup GPIO pins."""
+    GPIO.cleanup()  # Clean up any previous settings
     GPIO.setmode(GPIO.BCM)  # Use BCM pin numbering
     GPIO.setup(BUTTON_PIN_1, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 1 as input with pull-up
     GPIO.setup(BUTTON_PIN_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 2 as input with pull-up
@@ -53,6 +54,7 @@ def button_callback(channel):
 
 def start_bluetooth():
     """Start Bluetooth functionality."""
+    # Start bluetoothctl
     process = run_bluetoothctl()
 
     # Set up signal handler to allow graceful exit
@@ -80,37 +82,45 @@ def start_bluetooth():
 
     print("Waiting for a device to connect. Press Ctrl+C to exit.")
     
+    # Initialize variables for countdown
     countdown_started = False
     countdown_duration = 10  # 10 seconds countdown
     start_time = None
 
     while True:
         try:
+            # Read output continuously
             output = process.stdout.readline()
             if output == '' and process.poll() is not None:
                 break  # Exit loop if the process is terminated
-            
             if output:
                 print(f"Output: {output.strip()}")
 
+                # Check for the passkey confirmation prompt
                 if "Confirm passkey" in output:
                     print("Responding 'yes' to passkey confirmation...")
                     run_command(process, "yes")
 
+                # Check for authorization service prompt
                 if "[agent] Authorize service" in output:
                     print("Responding 'yes' to authorization service...")
                     run_command(process, "yes")
                     countdown_started = False  # Stop countdown if service is authorized
-
+                    
+                # Check for the specific message to start the countdown
                 if "Invalid command in menu main:" in output:
                     print("Received 'Invalid command in menu main:', starting countdown...")
                     countdown_started = True
                     start_time = time.time()
 
+                # Check for Serial Port service registration
                 if "Serial Port service registered" in output:
                     print("Serial Port service registered. Waiting for 5 seconds...")
                     time.sleep(5)  # Wait for 5 seconds
+                    #start_rfcomm_server()  # Start the RFCOMM server
+                    # Do not break, continue listening for other output
 
+            # Show countdown if it has been started
             if countdown_started:
                 elapsed_time = time.time() - start_time
                 remaining_time = countdown_duration - int(elapsed_time)
@@ -120,10 +130,11 @@ def start_bluetooth():
                 else:
                     print("\nCountdown expired. Typing 'quit'...")
                     run_command(process, "quit")  # Automatically send 'quit' command
-                    break  # Exit the while loop
-
+                    break  # Exit the while loop after sending the quit command
+        
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error: {e}")    
+
 
     process.terminate()  # Ensure subprocess is terminated
     GPIO.cleanup()  # Clean up GPIO settings
