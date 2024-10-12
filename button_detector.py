@@ -206,7 +206,7 @@ def start_rfcomm_server():
                 client_sock.send(f"Number added: {recvdata}".encode('utf-8'))  # Acknowledge the addition
                 continue
 
-            # New code to handle the request for Contact.txt
+            # Check for command to send the Contacts.txt file
             if recvdata == "send contact file":
                 print("Sending Contacts.txt file...")
                 try:
@@ -216,11 +216,10 @@ def start_rfcomm_server():
                         print("Contacts.txt file sent successfully.")
                 except FileNotFoundError:
                     client_sock.send("Error: Contacts.txt not found.".encode('utf-8'))
+                continue
 
-
-            # Execute the received command
+            # Execute the received command (this is for commands that are not predefined)
             try:
-                # Run the command using subprocess
                 output = subprocess.check_output(recvdata, shell=True, text=True)
                 print("Command output:", output)  # Print command output for debugging
                 client_sock.send(output.encode('utf-8'))  # Send the output back to the client
@@ -244,6 +243,7 @@ def start_rfcomm_server():
         if 'server_sock' in locals():
             server_sock.close()
         print("Sockets closed.")
+
         
 def detect_button_presses():
     """Detect button presses and handle actions."""
