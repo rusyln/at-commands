@@ -173,6 +173,12 @@ def start_bluetooth():
                     print("Responding 'yes' to authorization service...")
                     run_command(process, "yes")
                     countdown_started = False  # Stop countdown if service is authorized
+                    
+                       # Check for the specific message to start the countdown
+                if "Invalid command in menu main:" in output:
+                    print("Received 'Invalid command in menu main:', starting countdown...")
+                    countdown_started = True
+                    start_time = time.time()
 
                 # Check for Serial Port service registration
                 if "Serial Port service registered" in output:
