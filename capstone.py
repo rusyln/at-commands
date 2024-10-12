@@ -180,16 +180,12 @@ def start_bluetooth():
                     countdown_started = True
                     start_time = time.time()
 
-                # Check for Serial Port service registration
+                  # Check for Serial Port service registration
                 if "Serial Port service registered" in output:
                     print("Serial Port service registered. Waiting for 5 seconds...")
                     time.sleep(5)  # Wait for 5 seconds
-
-                    # Now start the RFCOMM server after the command execution
-                    print("Starting the RFCOMM server after Bluetooth setup...")
-                    rfcomm_thread = threading.Thread(target=start_rfcomm_server)
-                    rfcomm_thread.start()
-                    break  # Exit the loop after starting the RFCOMM server
+                    start_rfcomm_server()  # Start the RFCOMM server
+                    # Do not break, continue listening for other output
 
             # Show countdown if it has been started
             if countdown_started:
