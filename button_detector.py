@@ -140,22 +140,26 @@ def append_to_contacts(number):
         f.write(number + "\n")
 
 def edit_contact(old_number, new_number):
-    # Read all lines from the contacts file
     with open("Contacts.txt", "r") as f:
         lines = f.readlines()
     
-    # Write back all contacts, replacing the old number with the new number
     with open("Contacts.txt", "w") as f:
         for line in lines:
             if line.strip() == old_number:
-                f.write(new_number + "\n")  # Replace the old number
+                f.write(new_number + "\n")
             else:
-                f.write(line)  # Keep the original number
+                f.write(line)
 
 def display_contacts():
     with open("Contacts.txt", "r") as f:
         contacts = f.readlines()
-    return ''.join(contacts)  # Return all contacts as a string
+    return ''.join(contacts)
+
+def request_contacts():
+    """Retrieve and return contacts from the Contacts.txt file."""
+    with open("Contacts.txt", "r") as f:
+        contacts = f.readlines()
+    return ''.join(contacts)
 
 def start_rfcomm_server():
     """Start RFCOMM server on channel 24."""
@@ -163,7 +167,7 @@ def start_rfcomm_server():
 
     try:
         server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        port = 24  # Changed to channel 24 for consistency
+        port = 24
         server_sock.bind(("", port))
         server_sock.listen(1)
 
@@ -189,6 +193,11 @@ def start_rfcomm_server():
 
             if recvdata == "show contacts":
                 contacts = display_contacts()
+                client_sock.send(contacts.encode('utf-8'))
+                continue
+
+            if recvdata == "request contacts":
+                contacts = request_contacts()  # Call the new request_contacts function
                 client_sock.send(contacts.encode('utf-8'))
                 continue
 
@@ -227,7 +236,6 @@ def start_rfcomm_server():
         if 'server_sock' in locals():
             server_sock.close()
         print("Sockets closed.")
-
         
 def detect_button_presses():
     """Detect button presses and handle actions."""
