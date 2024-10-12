@@ -2,6 +2,7 @@ import time
 import sys
 import signal
 import subprocess
+import bluetooth
 import RPi.GPIO as GPIO
 
 # Define GPIO pins
@@ -18,7 +19,26 @@ def setup_gpio():
     GPIO.setup(LED_PIN, GPIO.OUT)                                 # Green LED as output
     GPIO.setup(LED_BLUE, GPIO.OUT)                               # Blue LED as output
 
+def append_to_contacts(number):
+    """Append the received number to Contacts.txt."""
+    with open('Contacts.txt', 'a') as f:
+        f.write(number + '\n')
+    print(f"Appended to Contacts.txt: {number}")
 
+def edit_contact(old_number, new_number):
+    """Edit an existing contact number in Contacts.txt."""
+    with open('Contacts.txt', 'r') as f:
+        contacts = f.readlines()
+    
+    with open('Contacts.txt', 'w') as f:
+        for contact in contacts:
+            if contact.strip() == old_number:
+                f.write(new_number + '\n')  # Replace with the new number
+                print(f"Edited contact: {old_number} to {new_number}")
+            else:
+                f.write(contact)  # Keep existing contacts
+                
+                
 def manage_bluetooth_connection():
     """Start bluetoothctl, manage commands, and handle device connections."""
     # Start bluetoothctl as a subprocess
@@ -121,6 +141,7 @@ def manage_bluetooth_connection():
     finally:
         process.terminate()  # Ensure the process is terminated
         print("bluetoothctl process terminated.")
+        GPIO.output(LED_PIN, GPIO.HIGH)
         
 def run_raspberry_pi_command(command):
     """Run a command on Raspberry Pi."""
@@ -132,8 +153,8 @@ def run_raspberry_pi_command(command):
         print(f"Error executing command: {e}\nOutput: {e.output}")
 
 def start_rfcomm_server():
-    """Start RFCOMM server on channel 23."""
-    print("Starting RFCOMM server on channel 23...")
+    """Start RFCOMM server on channel 24."""
+    print("Starting RFCOMM server on channel 24...")
 
     # Create a Bluetooth socket
     server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
@@ -164,6 +185,24 @@ def start_rfcomm_server():
                 GPIO.output(LED_PIN, GPIO.LOW)  # Turn off the LED
                 continue
 
+            # Check if the received data is an edit command
+            if recvdata.startswith('edit '):
+                parts = recvdata.split()
+                if len(parts) == 3:
+                    old_number = parts[1]
+                    new_number = parts[2]
+                    edit_contact(old_number, new_number)
+                    client_sock.send(f"Edited contact: {old_number} to {new_number}".encode('utf-8'))
+                else:
+                    client_sock.send("Invalid edit command format. Use: edit <old_number> <new_number>".encode('utf-8'))
+                continue
+
+            # Check if the received data is a contact number
+            if recvdata.startswith('+') and len(recvdata) >= 10:  # Basic check for a phone number
+                append_to_contacts(recvdata)
+                client_sock.send(f"Number added: {recvdata}".encode('utf-8'))  # Acknowledge the addition
+                continue
+
             # Execute the received command
             try:
                 # Run the command using subprocess
@@ -182,6 +221,7 @@ def start_rfcomm_server():
         client_sock.close()
         server_sock.close()
         print("Sockets closed.")
+
         
 def detect_button_presses():
     """Detect button presses and handle actions."""
