@@ -101,7 +101,9 @@ def start_bluetooth():
                     sys.stdout.write(f"\rWaiting for {remaining_time} seconds...")
                     sys.stdout.flush()
                 else:
-                    print("\nCountdown expired. Continuing to check for output...")
+                    print("\nCountdown expired. Typing 'quit'...")
+                    run_command(process, "quit")  # Automatically send 'quit' command
+                    break  # Exit the while loop after sending the quit command
 
         except Exception as e:
             print(f"Error: {e}")
