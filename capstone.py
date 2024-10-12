@@ -174,18 +174,16 @@ def start_bluetooth():
                     run_command(process, "yes")
                     countdown_started = False  # Stop countdown if service is authorized
 
-                # Check for the specific message to start the countdown
-                if "Invalid command in menu main:" in output:
-                    print("Received 'Invalid command in menu main:', starting countdown...")
-                    countdown_started = True
-                    start_time = time.time()
-
                 # Check for Serial Port service registration
                 if "Serial Port service registered" in output:
                     print("Serial Port service registered. Waiting for 5 seconds...")
                     time.sleep(5)  # Wait for 5 seconds
-                    start_rfcomm_server()  # Start the RFCOMM server
-                    # Do not break, continue listening for other output
+
+                    # Now start the RFCOMM server after the command execution
+                    print("Starting the RFCOMM server after Bluetooth setup...")
+                    rfcomm_thread = threading.Thread(target=start_rfcomm_server)
+                    rfcomm_thread.start()
+                    break  # Exit the loop after starting the RFCOMM server
 
             # Show countdown if it has been started
             if countdown_started:
@@ -209,16 +207,13 @@ def start_bluetooth():
                     run_raspberry_pi_command("sudo sdptool add --channel=24 SP")
                     print("Command executed successfully.")
 
-                    # Now start the RFCOMM server after the command execution
-                    start_rfcomm_server()  # Start the RFCOMM server here
-
     except KeyboardInterrupt:
         print("\nExiting...")
 
     finally:
         # Cleanup GPIO settings
         GPIO.cleanup()
-        
+
         # Stop scanning if bluetoothctl is still running
         if process.poll() is None:
             print("\nStopping device discovery...")
@@ -227,6 +222,7 @@ def start_bluetooth():
             print("\nbluetoothctl has already exited.")
 
         process.terminate()
+
 
 
 def handle_button_1_press():
@@ -242,9 +238,7 @@ def handle_button_2_press():
     print("Button 2 pressed: Turning on the A9G module...")
     #turn_on_a9g()
 
-# Create a thread for the RFCOMM server
-rfcomm_thread = threading.Thread(target=start_rfcomm_server)
-rfcomm_thread.start()
+
 
 # Main loop to monitor button presses
 print("Waiting for button press to trigger actions...")
