@@ -16,12 +16,20 @@ GPIO.setwarnings(False)  # Suppress GPIO warnings
 BUTTON_PIN_1 = 23  # Button 1 connected to GPIO 23
 BUTTON_PIN_2 = 24  # Button 2 connected to GPIO 24 (Add more as needed)
 A9G_PIN = 17       # A9G module control pin (PWR_KEY)
+LED_PIN = 12       # Green LED connected to GPIO 12
+LED_BLUE = 6       # Blue LED connected 
 
 # Set up GPIO pins
 GPIO.setup(BUTTON_PIN_1, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 1 input
 GPIO.setup(BUTTON_PIN_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 2 input
 GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
+GPIO.setup(LED_PIN, GPIO.OUT)  # LED as output
+GPIO.setup(LED_BLUE, GPIO.OUT)  # LED as output
 
+
+# Turn on the LED initially to indicate waiting state
+GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on the LED
+print("Green LED is ON while waiting for button press.")
 
 
 def start_rfcomm_server():
@@ -224,12 +232,14 @@ def start_bluetooth():
 def handle_button_1_press():
     """Handle the action for button 1 press."""
     print("Button 1 pressed: Initiating Bluetooth sequence...")
+    GPIO.output(LED_BLUE, GPIO.LOW)  # Turn off the LED when button 1 is pressed
     start_bluetooth()
+    GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn the LED back on after the Bluetooth sequence ends
 
 def handle_button_2_press():
     """Handle the action for button 2 press."""
     print("Button 2 pressed: Turning on the A9G module...")
-    turn_on_a9g()
+    #turn_on_a9g()
 
 # Create a thread for the RFCOMM server
 rfcomm_thread = threading.Thread(target=start_rfcomm_server)
