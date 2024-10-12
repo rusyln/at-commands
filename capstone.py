@@ -208,6 +208,9 @@ def start_bluetooth():
                     print("Ready to execute the Raspberry Pi command...")
                     run_raspberry_pi_command("sudo sdptool add --channel=24 SP")
                     print("Command executed successfully.")
+                    time.sleep(5)  # Wait for 5 seconds
+                    start_rfcomm_server()  # Start the RFCOMM server
+                    
 
     except KeyboardInterrupt:
         print("\nExiting...")
