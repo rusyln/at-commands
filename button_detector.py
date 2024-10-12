@@ -1,8 +1,8 @@
-import RPi.GPIO as GPIO
 import time
-import subprocess
 import sys
-import bluetooth 
+import signal
+import subprocess
+import RPi.GPIO as GPIO
 
 # Define GPIO pins
 BUTTON_PIN_1 = 23  # Button 1 connected to GPIO 23 (Bluetooth)
