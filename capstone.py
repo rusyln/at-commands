@@ -62,9 +62,13 @@ def start_rfcomm_server():
             print(f"Listening for connections on RFCOMM channel {channel}...")
 
             client_sock, address = server_sock.accept()
+            # Stop blinking and turn on the blue LED steadily
+            global blinking  # Ensure we are using the global variable
             blinking = False  # Stop the blinking loop
+            
             GPIO.output(LED_BLUE, GPIO.HIGH)  # Keep the blue LED on
             print("Connection established with:", address)
+   
 
             while True:
                 recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
