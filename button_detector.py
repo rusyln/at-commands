@@ -157,14 +157,16 @@ def start_rfcomm_server():
     print("Starting RFCOMM server on channel 24...")
 
     # Create a Bluetooth socket
-    server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-    port = 24
-    server_sock.bind(("", port))
-    server_sock.listen(1)
-
-    print(f"Listening for connections on RFCOMM channel {port}...")
-
     try:
+        server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+        port = 24
+
+        # Attempt to bind to the port
+        server_sock.bind(("", port))
+        server_sock.listen(1)
+
+        print(f"Listening for connections on RFCOMM channel {port}...")
+
         client_sock, address = server_sock.accept()
         print("Connection established with:", address)
 
@@ -214,14 +216,21 @@ def start_rfcomm_server():
                 print("Error:", error_message)  # Print the error for debugging
                 client_sock.send(error_message.encode('utf-8'))  # Send error message back to client
 
+    except bluetooth.BluetoothError as e:
+        print("Bluetooth error occurred:", e)
+        if "[Errno 98] Address already in use" in str(e):
+            print("The address is already in use. Closing the existing socket...")
+            server_sock.close()  # Close the socket if it's already in use
+
     except OSError as e:
-        print("Error:", e)
+        print("OS error occurred:", e)
 
     finally:
-        client_sock.close()
-        server_sock.close()
+        if 'client_sock' in locals():
+            client_sock.close()
+        if 'server_sock' in locals():
+            server_sock.close()
         print("Sockets closed.")
-
         
 def detect_button_presses():
     """Detect button presses and handle actions."""
