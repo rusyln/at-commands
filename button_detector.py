@@ -72,7 +72,7 @@ def manage_bluetooth_connection():
     try:
         print("Waiting for a device to connect...")
         countdown_started = False
-        countdown_duration = 10  # 10 seconds countdown
+        countdown_duration = 15  # 10 seconds countdown
         start_time = None
 
         while True:
