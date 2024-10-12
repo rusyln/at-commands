@@ -29,6 +29,13 @@ GPIO.setup(A9G_PIN, GPIO.OUT)  # A9G control pin as output
 GPIO.setup(LED_PIN, GPIO.OUT)  # LED as output
 GPIO.setup(LED_BLUE, GPIO.OUT)  # LED as output
 
+def setup_gpio():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(BUTTON_PIN_1, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(BUTTON_PIN_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(LED_BLUE, GPIO.OUT)
+    GPIO.output(LED_BLUE, GPIO.LOW)
+
 
 # Turn on the LED initially to indicate waiting state
 GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on the LED
@@ -227,61 +234,66 @@ def main():
         
 def start_rfcomm_server():
     """Start RFCOMM server on channel 24."""
-    server_sock = None
-    client_sock = None
     channel = 24  # Fixed RFCOMM channel
+    server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
 
-    while True:  # Loop to keep the server running
-        print("Starting RFCOMM server...")
+    try:
+        server_sock.bind(("", channel))
+        server_sock.listen(1)
+        print(f"Listening for connections on RFCOMM channel {channel}...")
 
-        # Create a Bluetooth socket
-        server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+        client_sock, address = server_sock.accept()
+        print("Connection established with:", address)
 
-        try:
-            server_sock.bind(("", channel))
-            server_sock.listen(1)
-            print(f"Listening for connections on RFCOMM channel {channel}...")
+        # Stop the LED blinking loop and turn the blue LED on
+        GPIO.output(LED_BLUE, GPIO.HIGH)
 
-            client_sock, address = server_sock.accept()
-            print("Connection established with:", address)
+        while True:
+            recvdata = client_sock.recv(1024).decode('utf-8').strip()
+            print("Received command:", recvdata)
 
-            global blinking  # Ensure we are using the global variable
-            blinking = False  # Stop the blinking loop
-            GPIO.output(LED_BLUE, GPIO.HIGH)  # Keep the blue LED on
+            if recvdata.lower() == "q" or recvdata.lower() == "socket close":
+                print("Ending connection.")
+                break
 
-            while True:
-                recvdata = client_sock.recv(1024).decode('utf-8').strip()  # Decode bytes to string and strip whitespace
-                print("Received command:", recvdata)
+            # Handle command execution here
+            response = "Command executed successfully"
+            client_sock.send(f"{response}\n".encode('utf-8'))
 
-                if recvdata.lower() == "q" or recvdata.lower() == "socket close":
-                    print("Ending connection.")
-                    break  # Break from the inner while loop to close the client socket
+    except bluetooth.btcommon.BluetoothError as e:
+        print("Bluetooth error:", e)
 
-                # Execute the command received from the Android device
-                response = run_raspberry_pi_command(recvdata)
+    finally:
+        # Ensure sockets are closed properly
+        if client_sock:
+            client_sock.close()
+            print("Client socket closed.")
+        if server_sock:
+            server_sock.close()
+            print("Server socket closed.")
+        print("Ready to listen for button press to start Bluetooth sequence.")
 
-                # Send the response back to the Android device
-                if response:
-                    client_sock.send(f"Command executed successfully:\n{response}".encode('utf-8'))
-                else:
-                    client_sock.send("Command execution failed or produced no output.".encode('utf-8'))
+def main():
+    setup_gpio()
+    print("Waiting for button press to trigger actions...")
 
-        except bluetooth.btcommon.BluetoothError as e:
-            print("Bluetooth error:", e)
-            time.sleep(1)
+    try:
+        while True:
+            if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
+                print("Button 1 pressed! Starting Bluetooth sequence...")
+                start_rfcomm_server()  # Start the Bluetooth server when the button is pressed
+                time.sleep(0.5)  # Debounce delay
 
-        finally:
-            # Ensure sockets are closed properly
-            if client_sock:
-                client_sock.close()
-                print("Client socket closed.")
-            if server_sock:
-                server_sock.close()
-                print("Server socket closed.")
+            if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
+                print("Button 2 pressed! Performing other action...")
+                time.sleep(0.5)  # Debounce delay
 
-            # Indicate readiness to accept new connections and wait for a button press to restart the sequence
-            print("Waiting for button press to turn on A9G module and send AT command...")
-            break  # Exit the RFCOMM loop and return to the main loop to wait for button press
+    except KeyboardInterrupt:
+        print("Script interrupted by user")
+
+    finally:
+        GPIO.cleanup()
+        print("GPIO cleanup completed")
 
 if __name__ == "__main__":
-    main()        
+    main()
