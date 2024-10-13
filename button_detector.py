@@ -321,7 +321,7 @@ def detect_button_presses():
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
 
-def get_gps_location(retries=3):
+def get_gps_location(retries=5):
     """Fetch GPS location data from the A9G module using AT+LOCATION=2.
     
     Args:
@@ -360,13 +360,12 @@ def get_gps_location(retries=3):
                 except ValueError:
                     print(f"Failed to parse GPS data: {line}")
 
-        # Stop GPS reading after getting the location
-        gps_read_response = send_command('AT+GPSRD=0')
-        print("GPS Read Response After Location Request:", gps_read_response)
-
         # Check if valid GPS data was found
         if latitude is not None and longitude is not None:
-            return latitude, longitude
+            # Stop GPS reading after getting the location
+            gps_read_response = send_command('AT+GPSRD=0')
+            print("GPS Read Response After Location Request:", gps_read_response)
+            return latitude, longitude  # Return valid data
         else:
             print("No valid GPS data found. Retrying...")
             time.sleep(2)  # Wait before retrying
