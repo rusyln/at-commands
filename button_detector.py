@@ -213,14 +213,15 @@ def start_rfcomm_server():
 
             if recvdata == "request contacts":
                 contacts = display_contacts()
+                
                 if contacts:
-                    print("Sending contacts:", contacts)  # Debug statement
-                    client_sock.send("\n".join(contacts).encode('utf-8'))  # Send the contacts in one go
+                    contacts_message = "\n".join(contacts) + "END_OF_CONTACTS"  # Prepare contacts with a delimiter
+                    print("Sending contacts:", contacts_message)  # Debug statement
+                    client_sock.send(contacts_message.encode('utf-8'))  # Send contacts with delimiter
                 else:
                     error_message = "No contacts available."
-                    print("Sending error message:", error_message)
+                    print("Sending error message:", error_message)  # Debug statement
                     client_sock.send(error_message.encode('utf-8'))  # Send error message if no contacts
-                continue
 
             if recvdata.startswith('edit '):
                 parts = recvdata.split()
