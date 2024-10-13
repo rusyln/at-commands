@@ -276,9 +276,6 @@ def turn_on_a9g():
     else:
         GPIO.output(A9G_POWER_PIN, GPIO.LOW)
         print("A9G module is not ready. Please check the connection.")
-    
-    GPIO.output(A9G_POWER_PIN, GPIO.LOW)  # Set the pin low to turn off the A9G module
-    print("A9G module powered off.")
 
 
 def send_command(command):
@@ -305,13 +302,31 @@ def detect_button_presses():
         
         # Check for button press on BUTTON_PIN_2
         if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
-            print("Initiating A9G module action...")
+            press_start_time = time.time()  # Record the start time of the press
             GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
-            turn_on_a9g()  # Call to turn on A9G and check readiness
+            while GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
+                time.sleep(0.1)  # Debounce delay while button is pressed
+
+            press_duration = time.time() - press_start_time  # Calculate press duration
+
+            # Check if it was a long press (3 seconds)
+            if press_duration >= 3:
+                print("Long press detected. Fetching GPS data...")
+                fetch_gps_data()  # Call the function to fetch GPS data
+            else:
+                print("Short press detected. Turning on A9G module...")
+                turn_on_a9g()  # Call to turn on A9G and check readiness
+            
             time.sleep(1)  # Delay to avoid multiple triggers
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
 
+def fetch_gps_data():
+    """Fetch GPS data from the A9G module."""
+    print("Fetching GPS data...")
+    # Here you can implement the logic to fetch GPS data
+    # For now, just print a placeholder
+    print("GPS data: Latitude: 0.0, Longitude: 0.0")  # Replace with actual GPS fetching logic
 
 def main():
     """Main function to initialize the button detection."""
