@@ -267,11 +267,14 @@ def start_rfcomm_server():
 def turn_on_a9g():
     print("Turning on A9G module...")
     GPIO.output(A9G_POWER_PIN, GPIO.HIGH)  # Set the pin high to turn on the A9G module
-    time.sleep(2)  # Keep it on for 2 seconds (adjust as needed)
+    time.sleep(10)  # Keep it on for 2 seconds (adjust as needed)
     
     if check_module_ready():  # Check if the A9G module is ready
         print("A9G module is ready.")
+        GPIO.output(LED_PIN, GPIO.LOW)
+        GPIO.output(LED_BLUE, GPIO.HIGH)
     else:
+        GPIO.output(A9G_POWER_PIN, GPIO.LOW)
         print("A9G module is not ready. Please check the connection.")
     
     GPIO.output(A9G_POWER_PIN, GPIO.LOW)  # Set the pin low to turn off the A9G module
@@ -305,14 +308,6 @@ def detect_button_presses():
             print("Initiating A9G module action...")
             GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
             turn_on_a9g()  # Call to turn on A9G and check readiness
-            
-            # Add further A9G module logic here if ready
-            if check_module_ready():  # Ensure the module is ready before executing further commands
-                # Add logic to send commands or interact with the A9G module
-                pass  # Replace this with your command logic
-            else:
-                print("A9G module is not ready. Please check the connection.")
-            
             time.sleep(1)  # Delay to avoid multiple triggers
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
