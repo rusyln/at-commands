@@ -173,6 +173,7 @@ def display_contacts():
         reader = csv.reader(f)
         for row in reader:
             contacts.append(f"ID: {row[0]}, Name: {row[1]}, Number: {row[2]}")
+    print("Contacts retrieved:", contacts)  # Debug statement
     return '\n'.join(contacts)
 
 def request_contacts():
@@ -206,10 +207,11 @@ def start_rfcomm_server():
                 GPIO.output(LED_PIN, GPIO.LOW)
                 continue
 
+            # In the start_rfcomm_server function, before sending contacts
             if recvdata == "show contacts":
                 contacts = display_contacts()
+                print("Sending contacts:", contacts)  # Debug statement
                 client_sock.send(contacts.encode('utf-8'))
-                continue
 
             if recvdata == "request contacts":
                 contacts = request_contacts()
