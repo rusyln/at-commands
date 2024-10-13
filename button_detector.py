@@ -166,15 +166,19 @@ def edit_contact(old_number, new_number):
         writer.writerows(updated_lines)
 
 def display_contacts():
-    """Display all contacts from the Contacts.csv file."""
-    ensure_contacts_file_exists()
+    with open("Contacts.csv", "r") as file:
+        lines = file.readlines()
+    
     contacts = []
-    with open("Contacts.csv", "r", newline='') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            contacts.append(f"ID: {row[0]}, Name: {row[1]}, Number: {row[2]}")
-    print("Contacts retrieved:", contacts)  # Debug statement
-    return '\n'.join(contacts)
+    # Assuming the first line contains headers
+    for line in lines[1:]:  # Skip the header line
+        parts = line.strip().split(',')
+        if len(parts) == 3:  # Ensure the expected format is correct
+            # Only send Name and Number
+            contacts.append(f"{parts[1].strip()}, {parts[2].strip()}")
+    
+    return "\n".join(contacts)  # Join contacts with newline for better parsing
+
 
 def request_contacts():
     """Retrieve and return all contacts from the Contacts.csv file."""
@@ -208,11 +212,10 @@ def start_rfcomm_server():
                 continue
 
             if recvdata == "request contacts":
-                contacts = display_contacts()  # Make sure this returns a list of strings
-                formatted_contacts = "\n".join(contacts)  # Join contacts with a newline or another delimiter
-                print("Sending contacts:", formatted_contacts)
-                client_sock.send(formatted_contacts.encode('utf-8'))
-                continue
+                contacts = display_contacts()
+                print("Sending contacts:", contacts)  # Debug statement
+                client_sock.send(contacts.encode('utf-8'))  # Send the contacts in one go
+
 
             if recvdata.startswith('edit '):
                 parts = recvdata.split()
