@@ -4,6 +4,7 @@ import signal
 import subprocess
 import bluetooth
 import csv
+import sqlite3
 import os
 import RPi.GPIO as GPIO
 
@@ -21,7 +22,56 @@ def setup_gpio():
     GPIO.setup(LED_PIN, GPIO.OUT)                                 # Green LED as output
     GPIO.setup(LED_BLUE, GPIO.OUT)                               # Blue LED as output
 
+def create_database():
+    """Create the SQLite database and contacts table if it doesn't exist."""
+    conn = sqlite3.connect('contacts.db')  # Create or open the SQLite database
+    cursor = conn.cursor()
 
+    # Create a table named 'contacts' if it doesn't already exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contacts (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            ContactName TEXT NOT NULL,
+            ContactNumber TEXT NOT NULL
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
+    print("Database and table 'contacts' created successfully.")
+
+def add_contact_to_database(contact_name, contact_number):
+    """Add a new contact to the contacts table."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    # Insert a new contact into the contacts table
+    cursor.execute('''
+        INSERT INTO contacts (ContactName, ContactNumber)
+        VALUES (?, ?)
+    ''', (contact_name, contact_number))
+
+    conn.commit()
+    conn.close()
+    print(f"Contact '{contact_name}' with number '{contact_number}' added successfully.")
+
+def list_all_contacts():
+    """Retrieve and display all contacts from the contacts table."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    # Query all contacts from the contacts table
+    cursor.execute('SELECT * FROM contacts')
+    contacts = cursor.fetchall()
+
+    conn.close()
+
+    if contacts:
+        print("Contact List:")
+        for contact in contacts:
+            print(f"ID: {contact[0]}, Name: {contact[1]}, Number: {contact[2]}")
+    else:
+        print("No contacts found in the database.")
                 
 def manage_bluetooth_connection():
     """Start bluetoothctl, manage commands, and handle device connections."""
@@ -136,53 +186,6 @@ def run_raspberry_pi_command(command):
     except subprocess.CalledProcessError as e:
         print(f"Error executing command: {e}\nOutput: {e.output}")
 
-def ensure_contacts_file_exists():
-    """Ensure that the Contacts.csv file exists and create it with headers if it doesn't."""
-    if not os.path.isfile("Contacts.csv"):
-        with open("Contacts.csv", "w", newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(["ID", "ContactName", "ContactNumber"])  # Write the header row
-
-def append_to_contacts(contact_id, contact_name, contact_number):
-    """Append a new contact to the Contacts.csv file."""
-    ensure_contacts_file_exists()
-    with open("Contacts.csv", "a", newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow([contact_id, contact_name, contact_number])
-
-def edit_contact(old_number, new_number):
-    """Edit an existing contact number in the Contacts.csv file."""
-    ensure_contacts_file_exists()
-    updated_lines = []
-    with open("Contacts.csv", "r", newline='') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            if row[2] == old_number:  # Assuming the contact number is the third column
-                row[2] = new_number
-            updated_lines.append(row)
-    
-    with open("Contacts.csv", "w", newline='') as f:
-        writer = csv.writer(f)
-        writer.writerows(updated_lines)
-
-def display_contacts():
-    with open("Contacts.csv", "r") as file:
-        lines = file.readlines()
-    
-    contacts = []
-    # Assuming the first line contains headers
-    for line in lines[1:]:  # Skip the header line
-        parts = line.strip().split(',')
-        if len(parts) == 3:  # Ensure the expected format is correct
-            # Only send Name and Number
-            contacts.append(f"{parts[1].strip()}, {parts[2].strip()}")
-    
-    return "\n".join(contacts)  # Join contacts with newline for better parsing
-
-
-def request_contacts():
-    """Retrieve and return all contacts from the Contacts.csv file."""
-    return display_contacts()
 
 def start_rfcomm_server():
     """Start RFCOMM server on channel 23."""
@@ -206,55 +209,14 @@ def start_rfcomm_server():
                 print("Ending connection.")
                 break   
 
-            if recvdata == "stop led":
-                print("Turning off the LED.")
-                GPIO.output(LED_PIN, GPIO.LOW)
+            if recvdata.startswith("contact:"):
+                # Example format: "contact:John Doe,1234567890"
+                _, contact_info = recvdata.split(":", 1)
+                contact_name, contact_number = contact_info.split(",", 1)
+                add_contact_to_database(contact_name.strip(), contact_number.strip())
+                print(f"Contact '{contact_name.strip()}' with number '{contact_number.strip()}' saved to the database.")
                 continue
 
-            if recvdata == "request contacts":
-                contacts = display_contacts()
-                
-                if contacts:
-                    contacts_message = "\n".join(contacts) + "END_OF_CONTACTS"  # Prepare contacts with a delimiter
-                    print("Sending contacts:", contacts_message)  # Debug statement
-                    client_sock.send(contacts_message.encode('utf-8'))  # Send contacts with delimiter
-                else:
-                    error_message = "No contacts available."
-                    print("Sending error message:", error_message)  # Debug statement
-                    client_sock.send(error_message.encode('utf-8'))  # Send error message if no contacts
-
-            if recvdata.startswith('edit '):
-                parts = recvdata.split()
-                if len(parts) == 3:
-                    old_number = parts[1]
-                    new_number = parts[2]
-                    edit_contact(old_number, new_number)
-                    client_sock.send(f"Edited contact: {old_number} to {new_number}".encode('utf-8'))
-                else:
-                    client_sock.send("Invalid edit command format. Use: edit <old_number> <new_number>".encode('utf-8'))
-                continue
-            
-            if recvdata.startswith('add_contact '):
-                parts = recvdata.split(maxsplit=2)
-                if len(parts) == 3:
-                    contact_name = parts[1]
-                    contact_number = parts[2]
-                    contact_id = str(len(open("Contacts.csv").readlines()))  # Generate a simple ID based on the line count
-                    append_to_contacts(contact_id, contact_name, contact_number)
-                    client_sock.send(f"Contact added: {contact_name} with number {contact_number}".encode('utf-8'))
-                else:
-                    client_sock.send("Invalid add_contact command format. Use: add_contact <name> <number>".encode('utf-8'))
-                continue
-            
-            if recvdata.startswith('+') and len(recvdata) >= 10:
-                ensure_contacts_file_exists()
-                contact_id = str(len(open("Contacts.csv").readlines()))  # Generate a simple ID based on the line count
-                contact_name = "Unknown"  # Placeholder name, can be replaced as needed
-                append_to_contacts(contact_id, contact_name, recvdata)
-                client_sock.send(f"Number added: {recvdata}".encode('utf-8'))
-                continue
-
-            # Remove shell command execution
             print(f"Unknown command received: {recvdata}")  # Log unknown commands
             client_sock.send(f"Unknown command: {recvdata}".encode('utf-8'))
 
@@ -307,4 +269,5 @@ def main():
         GPIO.cleanup()  # Clean up GPIO settings
 
 if __name__ == "__main__":
+    create_database()  # Ensure the database is set up before running
     main()
