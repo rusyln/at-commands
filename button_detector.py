@@ -312,7 +312,7 @@ def detect_button_presses():
             # Check if it was a long press (3 seconds)
             if press_duration >= 3:
                 print("Long press detected. Fetching GPS data...")
-                fetch_gps_data()  # Call the function to fetch GPS data
+                get_gps_location()  # Call the function to fetch GPS data
             else:
                 print("Short press detected. Turning on A9G module...")
                 turn_on_a9g()  # Call to turn on A9G and check readiness
@@ -321,12 +321,43 @@ def detect_button_presses():
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
 
-def fetch_gps_data():
-    """Fetch GPS data from the A9G module."""
-    print("Fetching GPS data...")
-    # Here you can implement the logic to fetch GPS data
-    # For now, just print a placeholder
-    print("GPS data: Latitude: 0.0, Longitude: 0.0")  # Replace with actual GPS fetching logic
+def get_gps_location():
+    """Fetch GPS location data from the A9G module using AT+LOCATION=2."""
+    # Enable GPS if it's not enabled
+    gps_enable_response = send_command('AT+GPS=1')  # Ensure GPS is enabled
+    print("GPS Activation Response:", gps_enable_response)
+
+    # Request GPS data for 5 seconds
+    gps_read_response = send_command('AT+GPSRD=5')
+    print("GPS Read Response:", gps_read_response)
+
+    # Wait for a moment to ensure data is ready
+    time.sleep(6)  # Wait for 5 seconds to allow GPS to gather data
+
+    # Now request GPS location
+    response = send_command('AT+LOCATION=2')
+    print("GPS Location Response:", response)
+
+    latitude, longitude = None, None
+
+    # Check for the expected response format
+    for line in response:
+        if "OK" not in line and line:  # Exclude the OK line
+            try:
+                latitude, longitude = map(float, line.split(','))
+                print(f"Latitude: {latitude}, Longitude: {longitude}")
+                break  # Exit once valid data is found
+            except ValueError:
+                print(f"Failed to parse GPS data: {line}")
+
+    # Instead of stopping GPS, we just read the data again for 5 seconds
+    gps_read_response = send_command('AT+GPSRD=0')
+    print("GPS Read Response After Location Request:", gps_read_response)
+
+    if latitude is None or longitude is None:
+        print("No valid GPS data found.")
+    
+    return latitude, longitude
 
 def main():
     """Main function to initialize the button detection."""
