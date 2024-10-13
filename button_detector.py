@@ -207,11 +207,12 @@ def start_rfcomm_server():
                 GPIO.output(LED_PIN, GPIO.LOW)
                 continue
 
-            # In the start_rfcomm_server function, before sending contacts
             if recvdata == "request contacts":
-                contacts = display_contacts()
-                print("Sending contacts:", contacts)  # Debug statement
-                client_sock.send(contacts.encode('utf-8'))
+                contacts = display_contacts()  # Make sure this returns a list of strings
+                formatted_contacts = "\n".join(contacts)  # Join contacts with a newline or another delimiter
+                print("Sending contacts:", formatted_contacts)
+                client_sock.send(formatted_contacts.encode('utf-8'))
+                continue
 
             if recvdata.startswith('edit '):
                 parts = recvdata.split()
@@ -263,6 +264,7 @@ def start_rfcomm_server():
         if 'server_sock' in locals():
             server_sock.close()
         print("Sockets closed.")
+
         
 def detect_button_presses():
     """Detect button presses and handle actions."""
