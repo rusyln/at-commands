@@ -226,7 +226,19 @@ def start_rfcomm_server():
                 else:
                     client_sock.send("Invalid edit command format. Use: edit <old_number> <new_number>".encode('utf-8'))
                 continue
-
+            
+            if recvdata.startswith('add_contact '):
+                parts = recvdata.split(maxsplit=2)
+                if len(parts) == 3:
+                    contact_name = parts[1]
+                    contact_number = parts[2]
+                    contact_id = str(len(open("Contacts.csv").readlines()))  # Generate a simple ID based on the line count
+                    append_to_contacts(contact_id, contact_name, contact_number)
+                    client_sock.send(f"Contact added: {contact_name} with number {contact_number}".encode('utf-8'))
+                else:
+                    client_sock.send("Invalid add_contact command format. Use: add_contact <name> <number>".encode('utf-8'))
+                continue
+            
             if recvdata.startswith('+') and len(recvdata) >= 10:
                 ensure_contacts_file_exists()
                 contact_id = str(len(open("Contacts.csv").readlines()))  # Generate a simple ID based on the line count
