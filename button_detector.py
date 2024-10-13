@@ -208,15 +208,10 @@ def start_rfcomm_server():
                 continue
 
             # In the start_rfcomm_server function, before sending contacts
-            if recvdata == "show contacts":
+            if recvdata == "request contacts":
                 contacts = display_contacts()
                 print("Sending contacts:", contacts)  # Debug statement
                 client_sock.send(contacts.encode('utf-8'))
-
-            if recvdata == "request contacts":
-                contacts = request_contacts()
-                client_sock.send(contacts.encode('utf-8'))
-                continue
 
             if recvdata.startswith('edit '):
                 parts = recvdata.split()
