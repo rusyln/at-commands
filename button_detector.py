@@ -23,7 +23,7 @@ def setup_gpio():
     GPIO.setup(LED_BLUE, GPIO.OUT)                               # Blue LED as output
 
 def create_database():
-    """Create the SQLite database and contacts table if it doesn't exist."""
+    """Create the SQLite database and contacts/messages tables if they don't exist."""
     conn = sqlite3.connect('contacts.db')  # Create or open the SQLite database
     cursor = conn.cursor()
 
@@ -36,9 +36,18 @@ def create_database():
         )
     ''')
 
+    # Create a table named 'messages' if it doesn't already exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS messages (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            MessageText TEXT NOT NULL
+        )
+    ''')
+
     conn.commit()
     conn.close()
-    print("Database and table 'contacts' created successfully.")
+    print("Database and tables 'contacts' and 'messages' created successfully.")
+
 
 def add_contact_to_database(contact_name, contact_number):
     """Add a new contact to the contacts table."""
@@ -54,7 +63,21 @@ def add_contact_to_database(contact_name, contact_number):
     conn.commit()
     conn.close()
     print(f"Contact '{contact_name}' with number '{contact_number}' added successfully.")
+def add_message_to_database(message_text):
+    """Add a new message to the messages table."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
 
+    # Insert a new message into the messages table
+    cursor.execute('''
+        INSERT INTO messages (MessageText)
+        VALUES (?)
+    ''', (message_text,))
+
+    conn.commit()
+    conn.close()
+    print(f"Message '{message_text}' added successfully.")
+    
 def list_all_contacts():
     """Retrieve and display all contacts from the contacts table."""
     conn = sqlite3.connect('contacts.db')
@@ -217,6 +240,13 @@ def start_rfcomm_server():
                 print(f"Contact '{contact_name.strip()}' with number '{contact_number.strip()}' saved to the database.")
                 continue
 
+            if recvdata.startswith("set message:"):
+                # Example format: "set message:Hello, this is a test message"
+                _, message_text = recvdata.split(":", 1)
+                add_message_to_database(message_text.strip())
+                print(f"Message '{message_text.strip()}' saved to the database.")
+                continue
+
             print(f"Unknown command received: {recvdata}")  # Log unknown commands
             client_sock.send(f"Unknown command: {recvdata}".encode('utf-8'))
 
@@ -230,6 +260,7 @@ def start_rfcomm_server():
         if 'server_sock' in locals():
             server_sock.close()
         print("Sockets closed.")
+
 
 
         
@@ -246,9 +277,9 @@ def detect_button_presses():
         # Check for button press on BUTTON_PIN_2
         if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
             print("Initiating A9G module action...")
-            GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on blue LED
+            GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
             time.sleep(1)  # Delay to avoid multiple triggers
-            GPIO.output(LED_BLUE, GPIO.LOW)   # Turn off blue LED
+         
             # Add A9G module logic here
             
            
