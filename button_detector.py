@@ -66,6 +66,21 @@ def add_contact_to_database(contact_name, contact_number):
     conn.commit()
     conn.close()
     print(f"Contact '{contact_name}' with number '{contact_number}' added successfully.")
+    
+def retrieve_all_messages():
+    """Retrieve all saved messages from the messages table."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    # Query all messages from the messages table
+    cursor.execute('SELECT MessageText FROM messages')
+    messages = cursor.fetchall()
+
+    conn.close()
+    
+    # Extract messages from tuples and return as a list
+    return [message[0] for message in messages]
+    
 def add_message_to_database(message_text):
     """Add a new message to the messages table."""
     conn = sqlite3.connect('contacts.db')
@@ -98,6 +113,70 @@ def list_all_contacts():
             print(f"ID: {contact[0]}, Name: {contact[1]}, Number: {contact[2]}")
     else:
         print("No contacts found in the database.")
+
+def retrieve_all_contact_numbers():
+    """Retrieve all contact numbers from the contacts table."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    # Query all contact numbers from the contacts table
+    cursor.execute('SELECT ContactNumber FROM contacts')
+    contact_numbers = cursor.fetchall()
+
+    conn.close()
+    
+    # Extract numbers from tuples and return as a list
+    return [contact[0] for contact in contact_numbers]
+
+
+def send_sms(latitude, longitude, contact, message_text):
+    """Send an SMS with a given message to a contact using the A9G module."""
+    # Set SMS format to text mode
+    response = send_command('AT+CMGF=1')
+    print("Setting SMS format:", response)
+
+    # Prepare the SMS command
+    sms_command = f'AT+CMGS="{contact}"'
+    response = send_command(sms_command)
+    print("SMS Command Response:", response)
+
+    # Send the message body
+    ser.write((message_text + chr(26)).encode())  # Send the message followed by Ctrl+Z (ASCII 26)
+    time.sleep(3)  # Wait for the message to be sent
+
+    # Check for response
+    response = ser.readlines()
+    print("SMS Response:", response)
+
+def send_sms_to_all_contacts(latitude, longitude):
+    """Send all saved messages from the database and then the GPS coordinates to all contacts."""
+    contacts = list_all_contacts()  # Retrieve all contacts from the database
+    messages = retrieve_all_messages()  # Retrieve all saved messages from the database
+    
+    if not contacts:
+        print("No contacts to send SMS.")
+        return
+
+    if not messages:
+        print("No messages to send.")
+        return
+
+    # Format for Google Maps URL
+    google_maps_url = f"{latitude},{longitude}"
+
+    # Send each message to each contact
+    for contact in contacts:
+        # Send each retrieved message
+        for message in messages:
+            print(f"Sending SMS to {contact[2]}: {message}...")
+            send_sms(None, None, contact[2], message)  # Send each message to the contact
+            time.sleep(1)  # Delay to avoid overwhelming the module
+
+        # After sending all messages, send the GPS coordinates
+        print(f"Sending GPS coordinates to {contact[2]}: {google_maps_url}...")
+        send_sms(None, None, contact[2], google_maps_url)  # Send Google Maps link to the contact
+        time.sleep(1)  # Delay to avoid overwhelming the module
+
                 
 def manage_bluetooth_connection():
     """Start bluetoothctl, manage commands, and handle device connections."""
@@ -372,6 +451,7 @@ def get_gps_location(retries=5):
 
     print("Failed to obtain valid GPS data after multiple attempts.")
     return None, None  # Return None if GPS data could not be retrieved
+
 
 
 def main():
