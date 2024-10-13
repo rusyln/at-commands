@@ -321,43 +321,59 @@ def detect_button_presses():
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
 
-def get_gps_location():
-    """Fetch GPS location data from the A9G module using AT+LOCATION=2."""
-    # Enable GPS if it's not enabled
-    gps_enable_response = send_command('AT+GPS=1')  # Ensure GPS is enabled
-    print("GPS Activation Response:", gps_enable_response)
-
-    # Request GPS data for 5 seconds
-    gps_read_response = send_command('AT+GPSRD=5')
-    print("GPS Read Response:", gps_read_response)
-
-    # Wait for a moment to ensure data is ready
-    time.sleep(6)  # Wait for 5 seconds to allow GPS to gather data
-
-    # Now request GPS location
-    response = send_command('AT+LOCATION=2')
-    print("GPS Location Response:", response)
-
-    latitude, longitude = None, None
-
-    # Check for the expected response format
-    for line in response:
-        if "OK" not in line and line:  # Exclude the OK line
-            try:
-                latitude, longitude = map(float, line.split(','))
-                print(f"Latitude: {latitude}, Longitude: {longitude}")
-                break  # Exit once valid data is found
-            except ValueError:
-                print(f"Failed to parse GPS data: {line}")
-
-    # Instead of stopping GPS, we just read the data again for 5 seconds
-    gps_read_response = send_command('AT+GPSRD=0')
-    print("GPS Read Response After Location Request:", gps_read_response)
-
-    if latitude is None or longitude is None:
-        print("No valid GPS data found.")
+def get_gps_location(retries=3):
+    """Fetch GPS location data from the A9G module using AT+LOCATION=2.
     
-    return latitude, longitude
+    Args:
+        retries (int): The number of times to retry fetching the GPS location if no valid data is found.
+    
+    Returns:
+        tuple: A tuple containing latitude and longitude or (None, None) if not found.
+    """
+    for attempt in range(retries):
+        print(f"Attempt {attempt + 1} to fetch GPS location...")
+
+        # Enable GPS if it's not enabled
+        gps_enable_response = send_command('AT+GPS=1')  # Ensure GPS is enabled
+        print("GPS Activation Response:", gps_enable_response)
+
+        # Request GPS data for 5 seconds
+        gps_read_response = send_command('AT+GPSRD=5')
+        print("GPS Read Response:", gps_read_response)
+
+        # Wait for a moment to ensure data is ready
+        time.sleep(6)  # Wait for 5 seconds to allow GPS to gather data
+
+        # Now request GPS location
+        response = send_command('AT+LOCATION=2')
+        print("GPS Location Response:", response)
+
+        latitude, longitude = None, None
+
+        # Check for the expected response format
+        for line in response:
+            if "OK" not in line and line:  # Exclude the OK line
+                try:
+                    latitude, longitude = map(float, line.split(','))
+                    print(f"Latitude: {latitude}, Longitude: {longitude}")
+                    break  # Exit once valid data is found
+                except ValueError:
+                    print(f"Failed to parse GPS data: {line}")
+
+        # Stop GPS reading after getting the location
+        gps_read_response = send_command('AT+GPSRD=0')
+        print("GPS Read Response After Location Request:", gps_read_response)
+
+        # Check if valid GPS data was found
+        if latitude is not None and longitude is not None:
+            return latitude, longitude
+        else:
+            print("No valid GPS data found. Retrying...")
+            time.sleep(2)  # Wait before retrying
+
+    print("Failed to obtain valid GPS data after multiple attempts.")
+    return None, None  # Return None if GPS data could not be retrieved
+
 
 def main():
     """Main function to initialize the button detection."""
