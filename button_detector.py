@@ -444,6 +444,9 @@ def get_gps_location(retries=5):
             # Stop GPS reading after getting the location
             gps_read_response = send_command('AT+GPSRD=0')
             print("GPS Read Response After Location Request:", gps_read_response)
+
+            # Now send SMS with retrieved messages and GPS coordinates
+            send_sms_to_all_contacts(latitude, longitude)  # Send SMS after getting location
             return latitude, longitude  # Return valid data
         else:
             print("No valid GPS data found. Retrying...")
@@ -451,6 +454,7 @@ def get_gps_location(retries=5):
 
     print("Failed to obtain valid GPS data after multiple attempts.")
     return None, None  # Return None if GPS data could not be retrieved
+
 
 
 
