@@ -14,7 +14,8 @@ BUTTON_PIN_2 = 24  # Button 2 connected to GPIO 24 (A9G Module)
 LED_PIN = 12       # Green LED connected to GPIO 12
 LED_BLUE = 6       # Blue LED connected to GPIO 6
 A9G_POWER_PIN = 17  # GPIO17
-
+# Initialize Serial connection with A9G module
+ser = serial.Serial('/dev/serial0', baudrate=115200, timeout=1)
 def setup_gpio():
     """Set up GPIO pins."""
     GPIO.setmode(GPIO.BCM)
@@ -262,41 +263,27 @@ def start_rfcomm_server():
             server_sock.close()
         print("Sockets closed.")
 
-def power_on_a9g():
-    """Power on the A9G module and send AT command to check if it's ready."""
-    
-    # Set up GPIO17 as an output to control the A9G module power
-    GPIO.setup(A9G_POWER_PIN, GPIO.OUT)
-    
-    # Power on the A9G module by setting GPIO17 high
-    GPIO.output(A9G_POWER_PIN, GPIO.HIGH)
-    print("A9G module is powering on...")
+def turn_on_a9g():
+    print("Turning on A9G module...")
+    GPIO.output(A9G_POWER_PIN, GPIO.HIGH)  # Set the pin high to turn on the A9G module
+    time.sleep(2)  # Keep it on for 2 seconds (adjust as needed)
+    GPIO.output(A9G_POWER_PIN, GPIO.LOW)  # Set the pin low to turn off the A9G module
+    print("A9G module powered on.")
 
-    # Wait for a few seconds to allow the A9G module to initialize
-    time.sleep(3)  # Adjust delay as needed for the A9G module to boot up
-    GPIO.output(LED_PIN, GPIO.LOW)
-    try:
-        # Open the serial port to communicate with the A9G module
-        with serial.Serial('/dev/ttyS0', baudrate=115200, timeout=1) as ser:
-            print("Serial port opened, sending AT command...")
 
-            # Send the AT command to check if the A9G module is ready
-            ser.write(b'AT\r')  # 'AT' followed by carriage return
+def send_command(command):
+    """Send a command to the A9G module and return the response."""
+    ser.write((command + '\r\n').encode())
+    time.sleep(1)  # Wait for the response
+    response = ser.readlines()
+    return [line.decode('utf-8').strip() for line in response]
 
-            # Wait for the response from the A9G module
-            response = ser.read(100).decode('utf-8').strip()  # Read up to 100 bytes
-
-            # Check if the response contains "OK", which indicates the A9G module is ready
-            if "OK" in response:
-                GPIO.output(LED_BLUE, GPIO.HIGH)
-                print("A9G module is ready. Response: ", response)
-            else:
-                print("A9G module did not respond correctly. Response: ", response)
-
-    except serial.SerialException as e:
-        print(f"Failed to communicate with the A9G module: {e}")
-
-        
+def check_module_ready():
+    """Check if the A9G module is ready by sending the AT command."""
+    response = send_command('AT')
+    print("AT Command Response:", response)
+    return any("OK" in line for line in response)
+       
 def detect_button_presses():
     """Detect button presses and handle actions."""
     while True:
@@ -305,20 +292,24 @@ def detect_button_presses():
             print("Initiating Bluetooth connection...")
             GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
             manage_bluetooth_connection()
-            
-
+        
         # Check for button press on BUTTON_PIN_2
         if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
             print("Initiating A9G module action...")
             GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
-            power_on_a9g()
-            time.sleep(1)  # Delay to avoid multiple triggers
-         
-            # Add A9G module logic here
+            turn_on_a9g()  # Call to turn on A9G and check readiness
             
-           
+            # Add further A9G module logic here if ready
+            if check_module_ready():  # Ensure the module is ready before executing further commands
+                # Add logic to send commands or interact with the A9G module
+                pass  # Replace this with your command logic
+            else:
+                print("A9G module is not ready. Please check the connection.")
+            
+            time.sleep(1)  # Delay to avoid multiple triggers
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
+
 
 def main():
     """Main function to initialize the button detection."""
