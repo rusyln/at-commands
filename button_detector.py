@@ -233,61 +233,27 @@ def start_rfcomm_server():
 
 
         
-# Define constants
-DOUBLE_PRESS_INTERVAL = 0.3  # Maximum interval between presses (in seconds)
-
 def detect_button_presses():
     """Detect button presses and handle actions."""
-    button1_last_press_time = 0
-    button1_press_count = 0
-
-    button2_last_press_time = 0
-    button2_press_count = 0
-
     while True:
-        current_time = time.time()
-
         # Check for button press on BUTTON_PIN_1
         if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
-            if (current_time - button1_last_press_time) < DOUBLE_PRESS_INTERVAL:
-                button1_press_count += 1  # Increment press count for button 1
-            else:
-                button1_press_count = 1  # Reset press count
-            button1_last_press_time = current_time  # Update last press time
-
-            # If button pressed twice
-            if button1_press_count == 2:
-                print("Button 1 pressed twice! Initiating special action...")
-                GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
-                # Add special action for double press here
-                button1_press_count = 0  # Reset count after action
-                time.sleep(0.5)  # Wait to avoid multiple triggers
+            print("Initiating Bluetooth connection...")
+            GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
+            manage_bluetooth_connection()
             
-            time.sleep(0.1)  # Delay to avoid multiple triggers
-            continue
 
         # Check for button press on BUTTON_PIN_2
         if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
-            if (current_time - button2_last_press_time) < DOUBLE_PRESS_INTERVAL:
-                button2_press_count += 1  # Increment press count for button 2
-            else:
-                button2_press_count = 1  # Reset press count
-            button2_last_press_time = current_time  # Update last press time
-
-            # If button pressed twice
-            if button2_press_count == 2:
-                print("Button 2 pressed twice! Initiating special action for A9G module...")
-                GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on blue LED
-                # Add special action for double press here
-                button2_press_count = 0  # Reset count after action
-                time.sleep(0.5)  # Wait to avoid multiple triggers
-
-            time.sleep(0.1)  # Delay to avoid multiple triggers
-            continue
+            print("Initiating A9G module action...")
+            GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on blue LED
+            time.sleep(1)  # Delay to avoid multiple triggers
+            GPIO.output(LED_BLUE, GPIO.LOW)   # Turn off blue LED
+            # Add A9G module logic here
+            
+           
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
-
-
 
 def main():
     """Main function to initialize the button detection."""
