@@ -23,6 +23,7 @@ def setup_gpio():
     GPIO.setup(BUTTON_PIN_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 2 as input with pull-up
     GPIO.setup(LED_PIN, GPIO.OUT)                                 # Green LED as output
     GPIO.setup(LED_BLUE, GPIO.OUT)                               # Blue LED as output
+    GPIO.setup(A9G_POWER_PIN, GPIO.OUT)                         # A9G Power pin as output
 
 def create_database():
     """Create the SQLite database and contacts/messages tables if they don't exist."""
@@ -267,8 +268,14 @@ def turn_on_a9g():
     print("Turning on A9G module...")
     GPIO.output(A9G_POWER_PIN, GPIO.HIGH)  # Set the pin high to turn on the A9G module
     time.sleep(2)  # Keep it on for 2 seconds (adjust as needed)
+    
+    if check_module_ready():  # Check if the A9G module is ready
+        print("A9G module is ready.")
+    else:
+        print("A9G module is not ready. Please check the connection.")
+    
     GPIO.output(A9G_POWER_PIN, GPIO.LOW)  # Set the pin low to turn off the A9G module
-    print("A9G module powered on.")
+    print("A9G module powered off.")
 
 
 def send_command(command):
