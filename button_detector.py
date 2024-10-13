@@ -115,18 +115,25 @@ def list_all_contacts():
         print("No contacts found in the database.")
 
 def retrieve_all_contact_numbers():
-    """Retrieve all contact numbers from the contacts table."""
+    """Retrieve all unique contact numbers from the contacts table."""
     conn = sqlite3.connect('contacts.db')
     cursor = conn.cursor()
 
-    # Query all contact numbers from the contacts table
-    cursor.execute('SELECT ContactNumber FROM contacts')
-    contact_numbers = cursor.fetchall()
+    try:
+        # Query all contact numbers from the contacts table
+        cursor.execute('SELECT ContactNumber FROM contacts')
+        contact_numbers = cursor.fetchall()
 
-    conn.close()
-    
-    # Extract numbers from tuples and return as a list
-    return [contact[0] for contact in contact_numbers]
+        # Extract numbers from tuples and return as a unique list
+        unique_contact_numbers = set(contact[0] for contact in contact_numbers)  # Use a set for uniqueness
+        return list(unique_contact_numbers)  # Convert set back to list
+
+    except sqlite3.Error as e:
+        print(f"An error occurred while retrieving contact numbers: {e}")
+        return []  # Return an empty list on error
+
+    finally:
+        conn.close()  # Ensure the connection is closed
 
 
 def send_sms(latitude, longitude, contact, message_text):
