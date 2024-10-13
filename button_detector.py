@@ -3,6 +3,7 @@ import sys
 import signal
 import subprocess
 import bluetooth
+import csv
 import os
 import RPi.GPIO as GPIO
 
@@ -135,31 +136,48 @@ def run_raspberry_pi_command(command):
     except subprocess.CalledProcessError as e:
         print(f"Error executing command: {e}\nOutput: {e.output}")
 
-def append_to_contacts(number):
-    with open("Contacts.txt", "a") as f:
-        f.write(number + "\n")
+def ensure_contacts_file_exists():
+    """Ensure that the Contacts.csv file exists and create it with headers if it doesn't."""
+    if not os.path.isfile("Contacts.csv"):
+        with open("Contacts.csv", "w", newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(["ID", "ContactName", "ContactNumber"])  # Write the header row
+
+def append_to_contacts(contact_id, contact_name, contact_number):
+    """Append a new contact to the Contacts.csv file."""
+    ensure_contacts_file_exists()
+    with open("Contacts.csv", "a", newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([contact_id, contact_name, contact_number])
 
 def edit_contact(old_number, new_number):
-    with open("Contacts.txt", "r") as f:
-        lines = f.readlines()
+    """Edit an existing contact number in the Contacts.csv file."""
+    ensure_contacts_file_exists()
+    updated_lines = []
+    with open("Contacts.csv", "r", newline='') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if row[2] == old_number:  # Assuming the contact number is the third column
+                row[2] = new_number
+            updated_lines.append(row)
     
-    with open("Contacts.txt", "w") as f:
-        for line in lines:
-            if line.strip() == old_number:
-                f.write(new_number + "\n")
-            else:
-                f.write(line)
+    with open("Contacts.csv", "w", newline='') as f:
+        writer = csv.writer(f)
+        writer.writerows(updated_lines)
 
 def display_contacts():
-    with open("Contacts.txt", "r") as f:
-        contacts = f.readlines()
-    return ''.join(contacts)
+    """Display all contacts from the Contacts.csv file."""
+    ensure_contacts_file_exists()
+    contacts = []
+    with open("Contacts.csv", "r", newline='') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            contacts.append(f"ID: {row[0]}, Name: {row[1]}, Number: {row[2]}")
+    return '\n'.join(contacts)
 
 def request_contacts():
-    """Retrieve and return contacts from the Contacts.txt file."""
-    with open("Contacts.txt", "r") as f:
-        contacts = f.readlines()
-    return ''.join(contacts)
+    """Retrieve and return all contacts from the Contacts.csv file."""
+    return display_contacts()
 
 def start_rfcomm_server():
     """Start RFCOMM server on channel 23."""
@@ -179,10 +197,7 @@ def start_rfcomm_server():
             recvdata = client_sock.recv(1024).decode('utf-8').strip()
             print("Received command:", recvdata)
 
-            if recvdata == "Q":
-                print("Ending connection.")
-                break
-            if recvdata == "socket close":
+            if recvdata == "Q" or recvdata == "socket close":
                 print("Ending connection.")
                 break   
 
@@ -197,7 +212,7 @@ def start_rfcomm_server():
                 continue
 
             if recvdata == "request contacts":
-                contacts = request_contacts()  # Call the new request_contacts function
+                contacts = request_contacts()
                 client_sock.send(contacts.encode('utf-8'))
                 continue
 
@@ -213,7 +228,10 @@ def start_rfcomm_server():
                 continue
 
             if recvdata.startswith('+') and len(recvdata) >= 10:
-                append_to_contacts(recvdata)
+                ensure_contacts_file_exists()
+                contact_id = str(len(open("Contacts.csv").readlines()))  # Generate a simple ID based on the line count
+                contact_name = "Unknown"  # Placeholder name, can be replaced as needed
+                append_to_contacts(contact_id, contact_name, recvdata)
                 client_sock.send(f"Number added: {recvdata}".encode('utf-8'))
                 continue
 
