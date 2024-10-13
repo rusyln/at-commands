@@ -97,23 +97,18 @@ def add_message_to_database(message_text):
     print(f"Message '{message_text}' added successfully.")
     
 def list_all_contacts():
-    """Retrieve and display all contacts from the contacts table."""
+    """Retrieve and return all contact numbers from the contacts table."""
     conn = sqlite3.connect('contacts.db')
     cursor = conn.cursor()
 
     # Query all contacts from the contacts table
-    cursor.execute('SELECT * FROM contacts')
-    contacts = cursor.fetchall()
+    cursor.execute('SELECT ContactNumber FROM contacts')
+    contact_numbers = cursor.fetchall()
 
     conn.close()
 
-    if contacts:
-        print("Contact List:")
-        for contact in contacts:
-            print(f"ID: {contact[0]}, Name: {contact[1]}, Number: {contact[2]}")
-    else:
-        print("No contacts found in the database.")
-
+    # Return only the numbers as a list
+    return [contact[0] for contact in contact_numbers]  # Extract the number from the tuples
 def retrieve_all_contact_numbers():
     """Retrieve all unique contact numbers from the contacts table."""
     conn = sqlite3.connect('contacts.db')
@@ -157,10 +152,10 @@ def send_sms(latitude, longitude, contact, message_text):
 
 def send_sms_to_all_contacts(latitude, longitude):
     """Send all saved messages from the database and then the GPS coordinates to all contacts."""
-    contacts = list_all_contacts()  # Retrieve all contacts from the database
+    contact_numbers = list_all_contacts()  # Retrieve all contact numbers from the database
     messages = retrieve_all_messages()  # Retrieve all saved messages from the database
     
-    if not contacts:
+    if not contact_numbers:
         print("No contacts to send SMS.")
         return
 
@@ -171,18 +166,19 @@ def send_sms_to_all_contacts(latitude, longitude):
     # Format for Google Maps URL
     google_maps_url = f"{latitude},{longitude}"
 
-    # Send each message to each contact
-    for contact in contacts:
+    # Send each message to each contact number
+    for contact in contact_numbers:
         # Send each retrieved message
         for message in messages:
-            print(f"Sending SMS to {contact[2]}: {message}...")
-            send_sms(None, None, contact[2], message)  # Send each message to the contact
+            print(f"Sending SMS to {contact}: {message}...")
+            send_sms(latitude, longitude, contact, message)  # Send each message to the contact
             time.sleep(1)  # Delay to avoid overwhelming the module
 
         # After sending all messages, send the GPS coordinates
-        print(f"Sending GPS coordinates to {contact[2]}: {google_maps_url}...")
-        send_sms(None, None, contact[2], google_maps_url)  # Send Google Maps link to the contact
+        print(f"Sending GPS coordinates to {contact}: {google_maps_url}...")
+        send_sms(latitude, longitude, contact, google_maps_url)  # Send Google Maps link to the contact
         time.sleep(1)  # Delay to avoid overwhelming the module
+
 
                 
 def manage_bluetooth_connection():
