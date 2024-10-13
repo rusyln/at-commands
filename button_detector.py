@@ -362,7 +362,12 @@ def send_command(command):
     ser.write((command + '\r\n').encode())
     time.sleep(1)  # Wait for the response
     response = ser.readlines()
-    return [line.decode('utf-8').strip() for line in response]
+    
+    # Print raw byte data for debugging
+    print("Raw Response:", response)  
+    
+    # Decode response and ignore decoding errors
+    return [line.decode('utf-8', errors='ignore').strip() for line in response]
 
 def check_module_ready():
     """Check if the A9G module is ready by sending the AT command."""
