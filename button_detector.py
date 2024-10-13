@@ -200,7 +200,7 @@ def start_rfcomm_server():
         print(f"Listening for connections on RFCOMM channel {port}...")
         client_sock, address = server_sock.accept()
         print("Connection established with:", address)
-
+        GPIO.output(LED_PIN, GPIO.HIGH)
         while True:
             recvdata = client_sock.recv(1024).decode('utf-8').strip()
             print("Received command:", recvdata)
