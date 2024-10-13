@@ -274,7 +274,7 @@ def power_on_a9g():
 
     # Wait for a few seconds to allow the A9G module to initialize
     time.sleep(3)  # Adjust delay as needed for the A9G module to boot up
-
+    GPIO.output(LED_PIN, GPIO.LOW)
     try:
         # Open the serial port to communicate with the A9G module
         with serial.Serial('/dev/ttyS0', baudrate=115200, timeout=1) as ser:
@@ -288,6 +288,7 @@ def power_on_a9g():
 
             # Check if the response contains "OK", which indicates the A9G module is ready
             if "OK" in response:
+                GPIO.output(LED_BLUE, GPIO.HIGH)
                 print("A9G module is ready. Response: ", response)
             else:
                 print("A9G module did not respond correctly. Response: ", response)
