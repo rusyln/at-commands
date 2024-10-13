@@ -213,9 +213,14 @@ def start_rfcomm_server():
 
             if recvdata == "request contacts":
                 contacts = display_contacts()
-                print("Sending contacts:", contacts)  # Debug statement
-                client_sock.send(contacts.encode('utf-8'))  # Send the contacts in one go
-
+                if contacts:
+                    print("Sending contacts:", contacts)  # Debug statement
+                    client_sock.send("\n".join(contacts).encode('utf-8'))  # Send the contacts in one go
+                else:
+                    error_message = "No contacts available."
+                    print("Sending error message:", error_message)
+                    client_sock.send(error_message.encode('utf-8'))  # Send error message if no contacts
+                continue
 
             if recvdata.startswith('edit '):
                 parts = recvdata.split()
@@ -248,14 +253,9 @@ def start_rfcomm_server():
                 client_sock.send(f"Number added: {recvdata}".encode('utf-8'))
                 continue
 
-            try:
-                output = subprocess.check_output(recvdata, shell=True, text=True)
-                print("Command output:", output)
-                client_sock.send(output.encode('utf-8'))
-            except subprocess.CalledProcessError as e:
-                error_message = f"Error executing command: {e}\nOutput: {e.output}"
-                print("Error:", error_message)
-                client_sock.send(error_message.encode('utf-8'))
+            # Remove shell command execution
+            print(f"Unknown command received: {recvdata}")  # Log unknown commands
+            client_sock.send(f"Unknown command: {recvdata}".encode('utf-8'))
 
     except bluetooth.BluetoothError as e:
         print("Bluetooth error occurred:", e)
@@ -267,6 +267,7 @@ def start_rfcomm_server():
         if 'server_sock' in locals():
             server_sock.close()
         print("Sockets closed.")
+
 
         
 def detect_button_presses():
