@@ -298,7 +298,7 @@ def run_raspberry_pi_command(command):
 
 
 def start_rfcomm_server():
-    """Start RFCOMM server on channel 23."""
+    """Start RFCOMM server on a random channel if needed."""
     print("Starting RFCOMM server on channel 23...")
 
     try:
@@ -340,8 +340,36 @@ def start_rfcomm_server():
 
     except bluetooth.BluetoothError as e:
         print("Bluetooth error occurred:", e)
+        if "Address already in use" in str(e):
+            new_port = random.randint(24, 99)
+            print(f"Address already in use. Trying a new port: {new_port}...")
+            run_raspberry_pi_command(f"sudo sdptool add --channel={new_port} SP")
+            start_rfcomm_server_with_new_port(new_port)  # Retry with new port
     except OSError as e:
         print("OS error occurred:", e)
+    finally:
+        if 'client_sock' in locals():
+            client_sock.close()
+        if 'server_sock' in locals():
+            server_sock.close()
+        print("Sockets closed.")
+
+def start_rfcomm_server_with_new_port(port):
+    """Start RFCOMM server on a specific port."""
+    try:
+        server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+        server_sock.bind(("", port))
+        server_sock.listen(1)
+
+        print(f"Listening for connections on RFCOMM channel {port}...")
+        client_sock, address = server_sock.accept()
+        GPIO.output(LED_BLUE, GPIO.HIGH)
+        print("Connection established with:", address)
+
+        # Continue handling client communication as above
+
+    except bluetooth.BluetoothError as e:
+        print("Bluetooth error occurred:", e)
     finally:
         if 'client_sock' in locals():
             client_sock.close()
