@@ -466,7 +466,7 @@ def start_rfcomm_server_with_new_port(port):
                 contacts = retrieve_all_contacts()
                 messages = retrieve_all_messages()
                 sync_data = {'contacts': contacts, 'messages': messages}
-                client_sock.send(str(sync_data).encode('utf-8'))
+                client_sock.send((str(sync_data) + "\nEND_OF_DATA").encode('utf-8'))
                 print("Data synced with the Android app.")
                 continue
 
