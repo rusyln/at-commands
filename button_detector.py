@@ -430,6 +430,7 @@ def detect_button_presses():
             # Check if it was a long press (3 seconds)
             if press_duration >= 3:
                 print("Long press detected. Fetching GPS data...")
+                GPIO.output(LED_BLUE, GPIO.LOW)
                 get_gps_location()  # Call the function to fetch GPS data
             else:
                 print("Short press detected. Turning on A9G module...")
