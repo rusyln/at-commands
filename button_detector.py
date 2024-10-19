@@ -376,13 +376,19 @@ def start_rfcomm_server():
                 print(f"Message '{message_text.strip()}' saved to the database.")
                 continue
             
-            if recvdata == "sync data":
+            if recvdata.startswith("sync data"):
                 # Retrieve all contacts and messages and send them to the Android app
                 contacts = retrieve_all_contacts()
                 messages = retrieve_all_messages()
+                
+                # Sync data as a dictionary
                 sync_data = {'contacts': contacts, 'messages': messages}
+                
+                # Send the data in string format
                 client_sock.send(str(sync_data).encode('utf-8'))
-                print("Data synced with the Android app.")
+                
+                # Print out the synced data
+                print("Data synced with the Android app:", sync_data)
                 continue
 
             if recvdata.startswith("delete contact:"):
