@@ -296,6 +296,47 @@ def run_raspberry_pi_command(command):
     except subprocess.CalledProcessError as e:
         print(f"Error executing command: {e}\nOutput: {e.output}")
 
+def retrieve_all_contacts():
+    """Retrieve all contacts from the contacts table."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    # Query all contacts from the contacts table
+    cursor.execute('SELECT ContactName, ContactNumber FROM contacts')
+    contacts = cursor.fetchall()
+
+    conn.close()
+    
+    # Return contacts as a list of dictionaries
+    return [{'name': contact[0], 'number': contact[1]} for contact in contacts]
+
+def delete_contact_from_database(contact_number):
+    """Delete a contact from the contacts table based on the contact number."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    # Delete the contact with the specified contact number
+    cursor.execute('DELETE FROM contacts WHERE ContactNumber = ?', (contact_number,))
+
+    conn.commit()
+    conn.close()
+    print(f"Contact with number '{contact_number}' deleted successfully.")
+
+def update_message_in_database(message_id, new_message_text):
+    """Update an existing message in the messages table."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    # Update the message text for the specified message ID
+    cursor.execute('''
+        UPDATE messages
+        SET MessageText = ?
+        WHERE ID = ?
+    ''', (new_message_text, message_id))
+
+    conn.commit()
+    conn.close()
+    print(f"Message with ID '{message_id}' updated successfully.")
 
 def start_rfcomm_server():
     """Start RFCOMM server on a random channel if needed."""
@@ -334,6 +375,30 @@ def start_rfcomm_server():
                 add_message_to_database(message_text.strip())
                 print(f"Message '{message_text.strip()}' saved to the database.")
                 continue
+            
+            if recvdata == "sync data":
+                # Retrieve all contacts and messages and send them to the Android app
+                contacts = retrieve_all_contacts()
+                messages = retrieve_all_messages()
+                sync_data = {'contacts': contacts, 'messages': messages}
+                client_sock.send(str(sync_data).encode('utf-8'))
+                print("Data synced with the Android app.")
+                continue
+
+            if recvdata.startswith("delete contact:"):
+                # Example format: "delete contact:1234567890"
+                _, contact_number = recvdata.split(":", 1)
+                delete_contact_from_database(contact_number.strip())
+                print(f"Contact with number '{contact_number.strip()}' deleted.")
+                continue
+
+            if recvdata.startswith("update message:"):
+                # Example format: "update message:1,New Message Text"
+                _, message_info = recvdata.split(":", 1)
+                message_id, new_message_text = message_info.split(",", 1)
+                update_message_in_database(message_id.strip(), new_message_text.strip())
+                print(f"Message with ID '{message_id.strip()}' updated to '{new_message_text.strip()}'.")
+                continue
 
             print(f"Unknown command received: {recvdata}")  # Log unknown commands
             client_sock.send(f"Unknown command: {recvdata}".encode('utf-8'))
@@ -367,6 +432,55 @@ def start_rfcomm_server_with_new_port(port):
         print("Connection established with:", address)
 
         # Continue handling client communication as above
+        while True:
+            recvdata = client_sock.recv(1024).decode('utf-8').strip()
+            print("Received command:", recvdata)
+
+            if recvdata == "Q" or recvdata == "socket close":
+                print("Ending connection.")
+                break   
+
+            if recvdata.startswith("contact:"):
+                # Example format: "contact:John Doe,1234567890"
+                _, contact_info = recvdata.split(":", 1)
+                contact_name, contact_number = contact_info.split(",", 1)
+                add_contact_to_database(contact_name.strip(), contact_number.strip())
+                print(f"Contact '{contact_name.strip()}' with number '{contact_number.strip()}' saved to the database.")
+                continue
+
+            if recvdata.startswith("set message:"):
+                # Example format: "set message:Hello, this is a test message"
+                _, message_text = recvdata.split(":", 1)
+                add_message_to_database(message_text.strip())
+                print(f"Message '{message_text.strip()}' saved to the database.")
+                continue
+            
+            if recvdata == "sync data":
+                # Retrieve all contacts and messages and send them to the Android app
+                contacts = retrieve_all_contacts()
+                messages = retrieve_all_messages()
+                sync_data = {'contacts': contacts, 'messages': messages}
+                client_sock.send(str(sync_data).encode('utf-8'))
+                print("Data synced with the Android app.")
+                continue
+
+            if recvdata.startswith("delete contact:"):
+                # Example format: "delete contact:1234567890"
+                _, contact_number = recvdata.split(":", 1)
+                delete_contact_from_database(contact_number.strip())
+                print(f"Contact with number '{contact_number.strip()}' deleted.")
+                continue
+
+            if recvdata.startswith("update message:"):
+                # Example format: "update message:1,New Message Text"
+                _, message_info = recvdata.split(":", 1)
+                message_id, new_message_text = message_info.split(",", 1)
+                update_message_in_database(message_id.strip(), new_message_text.strip())
+                print(f"Message with ID '{message_id.strip()}' updated to '{new_message_text.strip()}'.")
+                continue
+
+            print(f"Unknown command received: {recvdata}")  # Log unknown commands
+            client_sock.send(f"Unknown command: {recvdata}".encode('utf-8'))
 
     except bluetooth.BluetoothError as e:
         print("Bluetooth error occurred:", e)
