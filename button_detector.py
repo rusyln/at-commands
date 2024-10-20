@@ -235,7 +235,7 @@ def manage_bluetooth_connection():
                     device_found = True
                     break  # Exit loop since a device is found
 
-                # Check for the passkey confirmation prompt
+                # Check for passkey confirmation
                 if "Confirm passkey" in output:
                     print("Responding 'yes' to passkey confirmation...")
                     process.stdin.write("yes\n")
@@ -247,30 +247,6 @@ def manage_bluetooth_connection():
                     process.stdin.write("yes\n")
                     process.stdin.flush()
                     countdown_started = False  # Stop countdown if service is authorized
-
-                # Check for Serial Port service registration
-                if "Serial Port service registered" in output:
-                    print("Serial Port service registered. Waiting for 5 seconds...")
-                    time.sleep(5)  # Wait for 5 seconds
-
-            # Device found logic
-            if device_found:
-                print("Device connected. Sending 'quit' command to bluetoothctl...")
-                process.stdin.write("quit\n")
-                process.stdin.flush()
-                process.wait()  # Wait for bluetoothctl to exit gracefully
-
-                # Wait for 5 seconds for any response from bluetoothctl
-                print("Waiting for 5 seconds for any response from bluetoothctl...")
-                time.sleep(5)
-
-                # Execute the Raspberry Pi command after exiting bluetoothctl
-                print("Ready to execute the Raspberry Pi command...")
-                run_raspberry_pi_command("sudo sdptool add --channel=23 SP")
-                print("Command executed successfully.")
-                GPIO.output(LED_PIN, GPIO.LOW)  # Turn off green LED
-                start_rfcomm_server()
-                return  # Exit the function
 
             # Show countdown if it has been started (unchanged)
             if countdown_started:
@@ -298,13 +274,39 @@ def manage_bluetooth_connection():
                     start_rfcomm_server()
 
                     # Now start the RFCOMM server after the command execution
+                    return  # Exit the function after completing the steps
+
+        # Device found logic
+        if device_found:
+            print("Device connected. Sending 'quit' command to bluetoothctl...")
+            process.stdin.write("quit\n")
+            process.stdin.flush()
+
+            # Wait for bluetoothctl to terminate with a timeout
+            try:
+                process.wait(timeout=5)  # Wait up to 5 seconds for process to terminate
+            except subprocess.TimeoutExpired:
+                print("bluetoothctl did not terminate within 5 seconds. Forcing termination...")
+                process.terminate()
+                process.wait()  # Ensure process is fully terminated
+
+            # Now proceed with executing the Raspberry Pi command
+            print("Ready to execute the Raspberry Pi command...")
+            run_raspberry_pi_command("sudo sdptool add --channel=23 SP")
+            print("Command executed successfully.")
+            GPIO.output(LED_PIN, GPIO.LOW)  # Turn off green LED
+            start_rfcomm_server()
+            return  # Exit the function after completing the steps
 
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
-        process.terminate()  # Ensure the process is terminated
+        if process.poll() is None:  # Check if the process is still running
+            process.terminate()  # Ensure the process is terminated
+            process.wait()  # Wait for termination
         print("bluetoothctl process terminated.")
         GPIO.output(LED_PIN, GPIO.HIGH)
+
 
         
 def run_raspberry_pi_command(command):
