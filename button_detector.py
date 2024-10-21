@@ -230,10 +230,10 @@ def manage_bluetooth_connection():
                 print(f"Output: {output.strip()}")
 
                 # Check for a connected device after issuing 'devices' command
-                #if "Device" in output:
-                #    print(f"Device found: {output.strip()}")
-                #    device_found = True
-                #    break  # Exit loop since a device is found
+                if "Device" in output:
+                    print(f"Device found: {output.strip()}")
+                    device_found = True
+                    break  # Exit loop since a device is found
 
                 # Check for passkey confirmation
                 if "Confirm passkey" in output:
