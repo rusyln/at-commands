@@ -109,8 +109,13 @@ def list_all_contacts():
 
     conn.close()
 
-    # Return only the numbers as a list
-    return [contact[0] for contact in contact_numbers]  # Extract the number from the tuples
+    # Use a regular expression to extract valid contact numbers (keeping + and digits only)
+    cleaned_numbers = []
+    for contact in contact_numbers:
+        cleaned_number = re.sub(r'[^\d+]', '', contact[0])  # Remove all characters except digits and '+'
+        cleaned_numbers.append(cleaned_number)
+
+    return cleaned_numbers  # Return the cleaned list of numbers
 def retrieve_all_contact_numbers():
     """Retrieve all unique contact numbers from the contacts table."""
     conn = sqlite3.connect('contacts.db')
