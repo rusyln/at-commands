@@ -6,7 +6,6 @@ import bluetooth
 import csv
 import sqlite3
 import os
-import re
 import RPi.GPIO as GPIO
 import serial
 import random
@@ -110,13 +109,8 @@ def list_all_contacts():
 
     conn.close()
 
-    # Use a regular expression to extract valid contact numbers (keeping + and digits only)
-    cleaned_numbers = []
-    for contact in contact_numbers:
-        cleaned_number = re.sub(r'[^\d+]', '', contact[0])  # Remove all characters except digits and '+'
-        cleaned_numbers.append(cleaned_number)
-
-    return cleaned_numbers  # Return the cleaned list of numbers
+    # Return only the numbers as a list
+    return [contact[0] for contact in contact_numbers]  # Extract the number from the tuples
 def retrieve_all_contact_numbers():
     """Retrieve all unique contact numbers from the contacts table."""
     conn = sqlite3.connect('contacts.db')
@@ -206,8 +200,7 @@ def manage_bluetooth_connection():
         ("Making device discoverable...", "discoverable on"),
         ("Enabling agent...", "agent on"),
         ("Setting default agent...", "default-agent"),
-        ("Starting device discovery...", "scan on"),
-
+        ("Starting device discovery...", "scan on")
     ]
 
     for message, command in commands:
@@ -225,8 +218,6 @@ def manage_bluetooth_connection():
         countdown_duration = 10  # 10 seconds countdown
         start_time = None
 
-        device_found = False
-
         while True:
             # Read output continuously
             output = process.stdout.readline()
@@ -235,13 +226,7 @@ def manage_bluetooth_connection():
             if output:
                 print(f"Output: {output.strip()}")
 
-                # Check for a connected device after issuing 'devices' command
-                #if "Device" in output:
-                #    print(f"Device found: {output.strip()}")
-                #    device_found = True
-                #    break  # Exit loop since a device is found
-
-                # Check for passkey confirmation
+                # Check for the passkey confirmation prompt
                 if "Confirm passkey" in output:
                     print("Responding 'yes' to passkey confirmation...")
                     process.stdin.write("yes\n")
@@ -254,7 +239,20 @@ def manage_bluetooth_connection():
                     process.stdin.flush()
                     countdown_started = False  # Stop countdown if service is authorized
 
-            # Show countdown if it has been started (unchanged)
+                # Check for the specific message to start the countdown
+                if "Invalid command in menu main:" in output:
+                    print("Received 'Invalid command in menu main:', starting countdown...")
+                    countdown_started = True
+                    start_time = time.time()
+
+                # Check for Serial Port service registration
+                if "Serial Port service registered" in output:
+                    print("Serial Port service registered. Waiting for 5 seconds...")
+                    time.sleep(5)  # Wait for 5 seconds
+                    #start_rfcomm_server()  # Start the RFCOMM server
+                    # Continue listening for other output
+
+            # Show countdown if it has been started
             if countdown_started:
                 elapsed_time = time.time() - start_time
                 remaining_time = countdown_duration - int(elapsed_time)
@@ -280,40 +278,14 @@ def manage_bluetooth_connection():
                     start_rfcomm_server()
 
                     # Now start the RFCOMM server after the command execution
-                    return  # Exit the function after completing the steps
-
-        # Device found logic
-        if device_found:
-            print("Device connected. Sending 'quit' command to bluetoothctl...")
-            process.stdin.write("quit\n")
-            process.stdin.flush()
-
-            # Wait for bluetoothctl to terminate with a timeout
-            try:
-                process.wait(timeout=5)  # Wait up to 5 seconds for process to terminate
-            except subprocess.TimeoutExpired:
-                print("bluetoothctl did not terminate within 5 seconds. Forcing termination...")
-                process.terminate()
-                process.wait()  # Ensure process is fully terminated
-
-            # Now proceed with executing the Raspberry Pi command
-            print("Ready to execute the Raspberry Pi command...")
-            run_raspberry_pi_command("sudo sdptool add --channel=23 SP")
-            print("Command executed successfully.")
-            GPIO.output(LED_PIN, GPIO.LOW)  # Turn off green LED
-            start_rfcomm_server()
-            return  # Exit the function after completing the steps
+                   
 
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
-        if process.poll() is None:  # Check if the process is still running
-            process.terminate()  # Ensure the process is terminated
-            process.wait()  # Wait for termination
+        process.terminate()  # Ensure the process is terminated
         print("bluetoothctl process terminated.")
         GPIO.output(LED_PIN, GPIO.HIGH)
-
-
         
 def run_raspberry_pi_command(command):
     """Run a command on Raspberry Pi."""
