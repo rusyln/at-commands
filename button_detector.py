@@ -206,7 +206,8 @@ def manage_bluetooth_connection():
         ("Making device discoverable...", "discoverable on"),
         ("Enabling agent...", "agent on"),
         ("Setting default agent...", "default-agent"),
-        #("Checking for devices...", "devices")  # Add 'devices' command here
+        ("Starting device discovery...", "scan on"),
+        ("Checking for devices...", "devices Connected")  # Add 'devices' command here
     ]
 
     for message, command in commands:
@@ -233,6 +234,12 @@ def manage_bluetooth_connection():
                 break  # Exit loop if the process is terminated
             if output:
                 print(f"Output: {output.strip()}")
+
+                # Check for a connected device after issuing 'devices' command
+                if "Device" in output:
+                    print(f"Device found: {output.strip()}")
+                    device_found = True
+                    break  # Exit loop since a device is found
 
                 # Check for passkey confirmation
                 if "Confirm passkey" in output:
