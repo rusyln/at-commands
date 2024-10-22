@@ -206,7 +206,7 @@ def manage_bluetooth_connection():
         ("Making device discoverable...", "discoverable on"),
         ("Enabling agent...", "agent on"),
         ("Setting default agent...", "default-agent"),
-        ("Checking for devices...", "devices Connected")  # Add 'devices' command here
+        ("Checking for devices...", "devices Connected")
     ]
 
     for message, command in commands:
@@ -224,8 +224,6 @@ def manage_bluetooth_connection():
         countdown_duration = 10  # 10 seconds countdown
         start_time = None
 
-        device_found = False
-
         while True:
             # Read output continuously
             output = process.stdout.readline()
@@ -237,8 +235,9 @@ def manage_bluetooth_connection():
                 # Check for a connected device after issuing 'devices' command
                 if "Device" in output:
                     print(f"Device found: {output.strip()}")
-                    device_found = True
-                    break  # Exit loop since a device is found
+
+                    # Proceed with further Bluetooth operations but stay in the loop
+                    print("Waiting for additional connections or operations...")
 
                 # Check for passkey confirmation
                 if "Confirm passkey" in output:
@@ -253,7 +252,7 @@ def manage_bluetooth_connection():
                     process.stdin.flush()
                     countdown_started = False  # Stop countdown if service is authorized
 
-            # Show countdown if it has been started (unchanged)
+            # Show countdown if it has been started
             if countdown_started:
                 elapsed_time = time.time() - start_time
                 remaining_time = countdown_duration - int(elapsed_time)
@@ -281,28 +280,6 @@ def manage_bluetooth_connection():
                     # Now start the RFCOMM server after the command execution
                     return  # Exit the function after completing the steps
 
-        # Device found logic
-        if device_found:
-            print("Device connected. Sending 'quit' command to bluetoothctl...")
-            process.stdin.write("quit\n")
-            process.stdin.flush()
-
-            # Wait for bluetoothctl to terminate with a timeout
-            try:
-                process.wait(timeout=5)  # Wait up to 5 seconds for process to terminate
-            except subprocess.TimeoutExpired:
-                print("bluetoothctl did not terminate within 5 seconds. Forcing termination...")
-                process.terminate()
-                process.wait()  # Ensure process is fully terminated
-
-            # Now proceed with executing the Raspberry Pi command
-            print("Ready to execute the Raspberry Pi command...")
-            run_raspberry_pi_command("sudo sdptool add --channel=23 SP")
-            print("Command executed successfully.")
-            GPIO.output(LED_PIN, GPIO.LOW)  # Turn off green LED
-            start_rfcomm_server()
-            return  # Exit the function after completing the steps
-
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
@@ -313,7 +290,6 @@ def manage_bluetooth_connection():
         GPIO.output(LED_PIN, GPIO.HIGH)
 
 
-        
 def run_raspberry_pi_command(command):
     """Run a command on Raspberry Pi."""
     try:
