@@ -181,13 +181,19 @@ def send_sms_to_all_contacts(latitude, longitude):
         send_sms(latitude, longitude, contact, google_maps_url)  # Send Google Maps link to the contact
         time.sleep(1)  # Delay to avoid overwhelming the module
 
-def blink_led(duration=2):
-    """Blink the green LED for the given duration (in seconds)."""
+def steady_led(led_pin, duration=5):
+    """Turn on the specified LED steadily for the given duration (in seconds)."""
+    GPIO.output(led_pin, GPIO.HIGH)  # Turn on the LED
+    time.sleep(duration)              # Keep the LED on for the duration
+    GPIO.output(led_pin, GPIO.LOW)    # Turn off the LED after the duration
+
+def blink_led(led_pin, duration=5):
+    """Blink the specified LED for the given duration (in seconds)."""
     end_time = time.time() + duration
     while time.time() < end_time:
-        GPIO.output(LED_PIN, GPIO.HIGH)
+        GPIO.output(led_pin, GPIO.HIGH)  # Turn on the LED
         time.sleep(0.5)
-        GPIO.output(LED_PIN, GPIO.LOW)
+        GPIO.output(led_pin, GPIO.LOW)    # Turn off the LED
         time.sleep(0.5)
 
                 
@@ -216,7 +222,7 @@ def manage_bluetooth_connection():
 
     for message, command in commands:
         print(message)
-        blink_led()  # Blink during each command
+        blink_led(LED_BLUE, 10)  # Blink the blue LED for 5 seconds
         if process.poll() is None:  # Check if the process is still running
             process.stdin.write(command + '\n')
             process.stdin.flush()
