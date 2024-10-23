@@ -181,6 +181,14 @@ def send_sms_to_all_contacts(latitude, longitude):
         send_sms(latitude, longitude, contact, google_maps_url)  # Send Google Maps link to the contact
         time.sleep(1)  # Delay to avoid overwhelming the module
 
+def blink_led():
+    """Blink the green LED to show activity."""
+    for _ in range(5):  # Blink 5 times
+        GPIO.output(LED_PIN, GPIO.HIGH)
+        time.sleep(0.5)
+        GPIO.output(LED_PIN, GPIO.LOW)
+        time.sleep(0.5)
+
 
                 
 def manage_bluetooth_connection():
@@ -205,6 +213,7 @@ def manage_bluetooth_connection():
 
     for message, command in commands:
         print(message)
+        blink_led()  # Blink during each command
         if process.poll() is None:  # Check if the process is still running
             process.stdin.write(command + '\n')
             process.stdin.flush()
@@ -275,6 +284,7 @@ def manage_bluetooth_connection():
                     run_raspberry_pi_command("sudo sdptool add --channel=23 SP")
                     print("Command executed successfully.")
                     GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED
+                    GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on blue LED (steady light)
                     start_rfcomm_server()
 
                     # Now start the RFCOMM server after the command execution
