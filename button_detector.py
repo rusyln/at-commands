@@ -181,14 +181,14 @@ def send_sms_to_all_contacts(latitude, longitude):
         send_sms(latitude, longitude, contact, google_maps_url)  # Send Google Maps link to the contact
         time.sleep(1)  # Delay to avoid overwhelming the module
 
-def blink_led():
-    """Blink the green LED to show activity."""
-    for _ in range(5):  # Blink 5 times
+def blink_led(duration=2):
+    """Blink the green LED for the given duration (in seconds)."""
+    end_time = time.time() + duration
+    while time.time() < end_time:
         GPIO.output(LED_PIN, GPIO.HIGH)
         time.sleep(0.5)
         GPIO.output(LED_PIN, GPIO.LOW)
         time.sleep(0.5)
-
 
                 
 def manage_bluetooth_connection():
