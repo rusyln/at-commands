@@ -224,7 +224,6 @@ def manage_bluetooth_connection():
 
     for message, command in commands:
         print(message)
-        blink_led(LED_BLUE, 10)  # Blink the blue LED for 5 seconds
         if process.poll() is None:  # Check if the process is still running
             process.stdin.write(command + '\n')
             process.stdin.flush()
