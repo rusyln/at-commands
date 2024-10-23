@@ -193,6 +193,9 @@ def blink_led(duration=2):
                 
 def manage_bluetooth_connection():
     """Start bluetoothctl, manage commands, and handle device connections."""
+        # Set initial states for LEDs
+    GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED initially
+    GPIO.output(LED_BLUE, GPIO.LOW)   # Turn off blue LED initially
     # Start bluetoothctl as a subprocess
     process = subprocess.Popen(
         ['bluetoothctl'],
