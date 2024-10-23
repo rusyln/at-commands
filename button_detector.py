@@ -216,8 +216,7 @@ def manage_bluetooth_connection():
         ("Powering on the Bluetooth adapter...", "power on"),
         ("Making device discoverable...", "discoverable on"),
         ("Enabling agent...", "agent on"),
-        ("Setting default agent...", "default-agent"),
-        ("Starting device discovery...", "scan on")
+        ("Setting default agent...", "default-agent")
     ]
 
     for message, command in commands:
