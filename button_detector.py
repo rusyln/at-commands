@@ -217,17 +217,23 @@ def manage_bluetooth_connection():
         ("Making device discoverable...", "discoverable on"),
         ("Enabling agent...", "agent on"),
         ("Setting default agent...", "default-agent"),
-        ("Pairing with device...", "pairable on"),
-        ("Discovering devices...", "discover"),
-        ("Waiting for a device to connect...", None),
+        ("Starting device discovery...", "scan on")
     ]
 
     for message, command in commands:
         print(message)
+        
+        if command is None:
+            print("Command is None. Skipping...")
+            continue
+        
         if process.poll() is None:  # Check if the process is still running
-            process.stdin.write(command + '\n')
-            process.stdin.flush()
-            time.sleep(1)  # Allow some time for processing
+            try:
+                process.stdin.write(command + '\n')
+                process.stdin.flush()
+                time.sleep(1)  # Allow time for processing
+            except Exception as e:
+                print(f"Failed to send command '{command}': {e}")
         else:
             print(f"Process is not running. Unable to execute command: {command}")
 
