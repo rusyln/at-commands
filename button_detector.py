@@ -82,7 +82,34 @@ def retrieve_all_messages():
     
     # Extract messages from tuples and return as a list
     return [message[0] for message in messages]
-    
+
+def update_contact_in_database(contact_id, new_contact_name, new_contact_number):
+    """Update the contact information in the contacts table based on the contact ID."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    try:
+        # Update the contact details
+        cursor.execute('''
+            UPDATE contacts
+            SET ContactName = ?, ContactNumber = ?
+            WHERE ContactID = ?
+        ''', (new_contact_name, new_contact_number, contact_id))
+
+        if cursor.rowcount == 0:
+            print(f"No contact found with ID {contact_id}.")
+        else:
+            print(f"Contact with ID {contact_id} updated to Name: '{new_contact_name}', Number: '{new_contact_number}'.")
+
+        conn.commit()
+
+    except sqlite3.Error as e:
+        print(f"An error occurred while updating the contact: {e}")
+
+    finally:
+        conn.close()
+        
+            
 def add_message_to_database(message_text):
     """Add a new message to the messages table."""
     conn = sqlite3.connect('contacts.db')
@@ -460,6 +487,15 @@ def start_rfcomm_server():
                 delete_contact_from_database(contact_number.strip())
                 print(f"Contact with number '{contact_number.strip()}' deleted.")
                 continue
+            
+            if recvdata.startswith("update contact:"):
+                # Example format: "update contact:1,New Name,0987654321"
+                _, contact_info = recvdata.split(":", 1)
+                contact_id, new_contact_name, new_contact_number = contact_info.split(",", 2)
+                update_contact_in_database(contact_id.strip(), new_contact_name.strip(), new_contact_number.strip())
+                print(f"Contact with ID '{contact_id.strip()}' updated.")
+                continue
+
 
             if recvdata.startswith("update message:"):
                 # Example format: "update message:1,New Message Text"
