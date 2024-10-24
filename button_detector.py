@@ -217,7 +217,7 @@ def manage_bluetooth_connection():
         ("Making device discoverable...", "discoverable on"),
         ("Enabling agent...", "agent on"),
         ("Setting default agent...", "default-agent"),
-        ("Checking Devices Connected...", "devices Connected"),
+        ("Scaling device","scan on")
 
     ]
 
