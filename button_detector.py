@@ -287,7 +287,6 @@ def manage_bluetooth_connection():
                     sys.stdout.flush()
                 else:
                     print("\nNo authorization service found within 10 seconds. Sending 'quit' command to bluetoothctl...")
-                    process.stdin.write("power off\n")
                     process.stdin.write("quit\n")
                     process.stdin.flush()
                     process.wait()  # Wait for bluetoothctl to exit gracefully
@@ -313,9 +312,44 @@ def manage_bluetooth_connection():
     finally:
         process.terminate()  # Ensure the process is terminated
         print("bluetoothctl process terminated.")
+        turn_off_bluetooth()  # Call this function to turn off Bluetooth
         GPIO.output(LED_BLUE, GPIO.LOW)
         GPIO.output(LED_PIN, GPIO.HIGH)
         
+        
+def turn_off_bluetooth():
+    """Turn off Bluetooth using bluetoothctl."""
+    try:
+        # Start a new bluetoothctl process
+        process = subprocess.Popen(
+            ['bluetoothctl'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1  # Line-buffered
+        )
+
+        # Send the 'power off' command to disable Bluetooth
+        print("Turning off Bluetooth...")
+        process.stdin.write("power off\n")
+        process.stdin.flush()
+        
+        # Wait for the process to finish gracefully
+        process.stdin.write("quit\n")
+        process.stdin.flush()
+        process.wait()  # Wait for process termination
+
+        # Process has successfully terminated
+        print("bluetoothctl process terminated. Bluetooth is now powered off.")
+
+    except Exception as e:
+        print(f"An error occurred while turning off Bluetooth: {e}")
+    finally:
+        process.terminate()
+        print("Bluetooth turned off successfully.")
+        
+                
 def run_raspberry_pi_command(command):
     """Run a command on Raspberry Pi."""
     try:
@@ -659,3 +693,4 @@ def main():
 if __name__ == "__main__":
     create_database()  # Ensure the database is set up before running
     main()
+    
