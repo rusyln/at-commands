@@ -288,6 +288,7 @@ def manage_bluetooth_connection():
                 else:
                     print("\nNo authorization service found within 10 seconds. Sending 'quit' command to bluetoothctl...")
                     process.stdin.write("quit\n")
+                    process.stdin.write("power off\n")
                     process.stdin.flush()
                     process.wait()  # Wait for bluetoothctl to exit gracefully
                     countdown_started = False  # Reset countdown after sending quit
