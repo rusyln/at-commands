@@ -312,6 +312,7 @@ def manage_bluetooth_connection():
     finally:
         process.terminate()  # Ensure the process is terminated
         print("bluetoothctl process terminated.")
+        GPIO.output(LED_BLUE, GPIO.LOW)
         GPIO.output(LED_PIN, GPIO.HIGH)
         
 def run_raspberry_pi_command(command):
