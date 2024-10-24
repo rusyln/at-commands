@@ -647,6 +647,8 @@ def main():
         GPIO.cleanup()           # Clean up GPIO settings
         setup_gpio()             # Set up GPIO pins
         print("System is ready, waiting for button press...")
+        GPIO.output(LED_PIN, GPIO.HIGH) 
+        GPIO.output(LED_BLUE, GPIO.LOW) 
         detect_button_presses()  # Start detecting button presses
     except KeyboardInterrupt:
         print("Program stopped by user.")
