@@ -36,6 +36,7 @@ def create_database():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS contacts (
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            A_ID INTEGER NOT NULL,  -- New separate ID for Android data as INTEGER
             ContactName TEXT NOT NULL,
             ContactNumber TEXT NOT NULL
         )
@@ -54,20 +55,20 @@ def create_database():
     print("Database and tables 'contacts' and 'messages' created successfully.")
 
 
-def add_contact_to_database(contact_name, contact_number):
-    """Add a new contact to the contacts table."""
+def add_contact_to_database(a_id, contact_name, contact_number):
+    """Add a new contact to the contacts table with A_ID."""
     conn = sqlite3.connect('contacts.db')
     cursor = conn.cursor()
 
     # Insert a new contact into the contacts table
     cursor.execute('''
-        INSERT INTO contacts (ContactName, ContactNumber)
-        VALUES (?, ?)
-    ''', (contact_name, contact_number))
+        INSERT INTO contacts (A_ID, ContactName, ContactNumber)
+        VALUES (?, ?, ?)
+    ''', (a_id, contact_name, contact_number))
 
     conn.commit()
     conn.close()
-    print(f"Contact '{contact_name}' with number '{contact_number}' added successfully.")
+    print(f"Contact '{contact_name}' with number '{contact_number}' and A_ID '{a_id}' added successfully.")
     
 def retrieve_all_messages():
     """Retrieve all saved messages from the messages table."""
@@ -83,23 +84,23 @@ def retrieve_all_messages():
     # Extract messages from tuples and return as a list
     return [message[0] for message in messages]
 
-def update_contact_in_database(contact_id, new_contact_name, new_contact_number):
-    """Update the contact information in the contacts table based on the contact ID."""
+def update_contact_in_database(a_id, new_contact_name, new_contact_number):
+    """Update the contact information in the contacts table based on the A_ID."""
     conn = sqlite3.connect('contacts.db')
     cursor = conn.cursor()
 
     try:
-        # Update the contact details
+        # Update the contact details using A_ID
         cursor.execute('''
             UPDATE contacts
             SET ContactName = ?, ContactNumber = ?
-            WHERE ContactID = ?
-        ''', (new_contact_name, new_contact_number, contact_id))
+            WHERE A_ID = ?  -- Use A_ID to identify the contact
+        ''', (new_contact_name, new_contact_number, a_id))
 
         if cursor.rowcount == 0:
-            print(f"No contact found with ID {contact_id}.")
+            print(f"No contact found with A_ID {a_id}.")
         else:
-            print(f"Contact with ID {contact_id} updated to Name: '{new_contact_name}', Number: '{new_contact_number}'.")
+            print(f"Contact with A_ID {a_id} updated to Name: '{new_contact_name}', Number: '{new_contact_number}'.")
 
         conn.commit()
 
