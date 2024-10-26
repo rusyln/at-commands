@@ -453,12 +453,15 @@ def start_rfcomm_server():
                 break   
 
             if recvdata.startswith("contact:"):
-                # Example format: "contact:John Doe,1234567890"
+                # Example format: "contact:A_ID,ContactName,ContactNumber"
                 _, contact_info = recvdata.split(":", 1)
-                contact_name, contact_number = contact_info.split(",", 1)
-                add_contact_to_database(contact_name.strip(), contact_number.strip())
-                print(f"Contact '{contact_name.strip()}' with number '{contact_number.strip()}' saved to the database.")
+                a_id, contact_name, contact_number = contact_info.split(",", 2)
+                
+                # Call the function with all three arguments
+                add_contact_to_database(int(a_id.strip()), contact_name.strip(), contact_number.strip())
+                print(f"Contact '{contact_name.strip()}' with number '{contact_number.strip()}' and A_ID '{a_id.strip()}' saved to the database.")
                 continue
+
 
             if recvdata.startswith("set message:"):
                 # Example format: "set message:Hello, this is a test message"
