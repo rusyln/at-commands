@@ -188,34 +188,7 @@ def send_sms(latitude, longitude, contact, message_text):
     response = ser.readlines()
     print("SMS Response:", response)
 
-def send_sms_to_all_contacts(latitude, longitude):
-    """Send all saved messages from the database and then the GPS coordinates to all contacts."""
-    contact_numbers = list_all_contacts()  # Retrieve all contact numbers from the database
-    messages = retrieve_all_messages()  # Retrieve all saved messages from the database
-    
-    if not contact_numbers:
-        print("No contacts to send SMS.")
-        return
 
-    if not messages:
-        print("No messages to send.")
-        return
-
-    # Format for Google Maps URL
-    google_maps_url = f"{latitude},{longitude}"
-
-    # Send each message to each contact number
-    for contact in contact_numbers:
-        # Send each retrieved message
-        for message in messages:
-            print(f"Sending SMS to {contact}: {message}...")
-            send_sms(latitude, longitude, contact, message)  # Send each message to the contact
-            time.sleep(1)  # Delay to avoid overwhelming the module
-
-        # After sending all messages, send the GPS coordinates
-        print(f"Sending GPS coordinates to {contact}: {google_maps_url}...")
-        send_sms(latitude, longitude, contact, google_maps_url)  # Send Google Maps link to the contact
-        time.sleep(1)  # Delay to avoid overwhelming the module
 
 def steady_led(led_pin, duration=5):
     """Turn on the specified LED steadily for the given duration (in seconds)."""
@@ -623,7 +596,17 @@ def turn_on_a9g():
         GPIO.output(A9G_POWER_PIN, GPIO.LOW)
         print("A9G module is not ready. Please check the connection.")
 
+def turn_off_a9g():
+    print("Turning off A9G module...")
+    GPIO.output(A9G_POWER_PIN, GPIO.LOW)  # Set the pin low to turn off the A9G module
+    time.sleep(2)  # Wait for the module to turn off (adjust time if needed)
 
+    # Turn off the LEDs to indicate the module is off
+    GPIO.output(LED_PIN, GPIO.HIGH)
+    GPIO.output(LED_BLUE, GPIO.LOW)
+    print("A9G module is turned off.")
+    
+    
 def send_command(command):
     """Send a command to the A9G module and return the response."""
     ser.write((command + '\r\n').encode())
@@ -722,6 +705,38 @@ def get_gps_location():
             print("No valid GPS data found. Retrying...")
             time.sleep(2)  # Wait before retrying
 
+def send_sms_to_all_contacts(latitude, longitude):
+    """Send all saved messages from the database and then the GPS coordinates to all contacts."""
+    contact_numbers = list_all_contacts()  # Retrieve all contact numbers from the database
+    messages = retrieve_all_messages()  # Retrieve all saved messages from the database
+    
+    if not contact_numbers:
+        print("No contacts to send SMS.")
+        return
+
+    if not messages:
+        print("No messages to send.")
+        return
+
+    # Format for Google Maps URL
+    google_maps_url = f"{latitude},{longitude}"
+
+    # Send each message to each contact number
+    for contact in contact_numbers:
+        # Send each retrieved message
+        for message in messages:
+            print(f"Sending SMS to {contact}: {message}...")
+            send_sms(latitude, longitude, contact, message)  # Send each message to the contact
+            time.sleep(1)  # Delay to avoid overwhelming the module
+
+        # After sending all messages, send the GPS coordinates
+        print(f"Sending GPS coordinates to {contact}: {google_maps_url}...")
+        send_sms(latitude, longitude, contact, google_maps_url)  # Send Google Maps link to the contact
+        time.sleep(1)  # Delay to avoid overwhelming the module
+
+    # Turn off A9G module after sending the final message
+    turn_off_a9g()
+    print("All messages sent. A9G module turned off.")
 
 
 
