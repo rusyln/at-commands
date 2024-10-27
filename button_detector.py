@@ -611,14 +611,37 @@ def turn_on_a9g():
         print("A9G module is not ready. Please check the connection.")
 
 def turn_off_a9g():
-    print("Turning off A9G module...")
-    GPIO.output(A9G_POWER_PIN, GPIO.LOW)  # Set the pin low to turn off the A9G module
-    time.sleep(2)  # Wait for the module to turn off (adjust time if needed)
+    """Check A9G responsiveness with AT command, then power it off if responsive."""
+    # Set initial LED states
+    GPIO.output(LED_PIN, GPIO.HIGH)   # Turn on green LED
+    GPIO.output(LED_BLUE, GPIO.LOW)   # Turn off blue LED
+    
+    # Step 1: Send initial AT command to check for response
+    response = send_command('AT')
+    print("Initial AT command response:", response)
+    
+    # Step 2: Check if response is as expected
+    if 'OK' in response:
+        print("A9G module is responsive. Proceeding with power-off command.")
+        
+        # Step 3: Send the power-off command
+        power_off_response = send_command('AT+RST=2')
+        print("A9G power-off command response:", power_off_response)
+        
+        # Optional: Control GPIO pin to ensure power is off
+        GPIO.output(A9G_POWER_PIN, GPIO.LOW)
+        print("A9G module powered off via AT command and GPIO.")
+        
+        # Delay to allow for complete power-off
+        time.sleep(2)
+        
+        # Update LED state to indicate completion
+        GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED
+        GPIO.output(LED_BLUE, GPIO.HIGH) # Turn on blue LED to indicate module is powered off
+        
+    else:
+        print("A9G module is not responding. Unable to power off.")
 
-    # Turn off the LEDs to indicate the module is off
-    GPIO.output(LED_PIN, GPIO.HIGH)
-    GPIO.output(LED_BLUE, GPIO.LOW)
-    print("A9G module is turned off.")
     
     
 def send_command(command):
