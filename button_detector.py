@@ -29,30 +29,38 @@ def setup_gpio():
 
 def create_database():
     """Create the SQLite database and contacts/messages tables if they don't exist."""
-    conn = sqlite3.connect('contacts.db')  # Create or open the SQLite database
+    db_file = 'contacts.db'
+
+    # Connect to the SQLite database; if the file doesn't exist, it will be created.
+    db_exists = os.path.exists(db_file)
+    conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
 
-    # Create a table named 'contacts' if it doesn't already exist
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS contacts (
-            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-            A_ID INTEGER NOT NULL,  -- New separate ID for Android data as INTEGER
-            ContactName TEXT NOT NULL,
-            ContactNumber TEXT NOT NULL
-        )
-    ''')
+    # If the database did not exist, create the tables
+    if not db_exists:
+        # Create a table named 'contacts' if it doesn't already exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS contacts (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                A_ID INTEGER NOT NULL,  -- New separate ID for Android data as INTEGER
+                ContactName TEXT NOT NULL,
+                ContactNumber TEXT NOT NULL
+            )
+        ''')
 
-    # Create a table named 'messages' if it doesn't already exist
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS messages (
-            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-            MessageText TEXT NOT NULL
-        )
-    ''')
+        # Create a table named 'messages' if it doesn't already exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS messages (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                MessageText TEXT NOT NULL
+            )
+        ''')
+        print("Database and tables 'contacts' and 'messages' created successfully.")
+    else:
+        print("Database already exists, no need to create tables.")
 
     conn.commit()
     conn.close()
-    print("Database and tables 'contacts' and 'messages' created successfully.")
 
 
 def add_contact_to_database(a_id, contact_name, contact_number):
