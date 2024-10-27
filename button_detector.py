@@ -208,12 +208,26 @@ def blink_led(led_pin, duration=5):
         GPIO.output(led_pin, GPIO.LOW)    # Turn off the LED
         time.sleep(0.5)
 
-                
+                def blue_led_blink():
+    """Blink the Blue LED while Bluetooth is connecting until stopped."""
+    while not stop_event.is_set():
+        GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on Blue LED
+        time.sleep(0.5)                   # Blink interval
+        GPIO.output(LED_BLUE, GPIO.LOW)   # Turn off Blue LED
+        time.sleep(0.5)
+
 def manage_bluetooth_connection():
     """Start bluetoothctl, manage commands, and handle device connections."""
-        # Set initial states for LEDs
+    # Set initial states for LEDs
     GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED initially
-    GPIO.output(LED_BLUE, GPIO.LOW)   # Turn off blue LED initially
+    GPIO.output(LED_BLUE, GPIO.LOW)  # Turn off blue LED initially
+
+    # Start the Blue LED blinking thread
+    global stop_event
+    stop_event = threading.Event()
+    blue_led_thread = threading.Thread(target=blue_led_blink)
+    blue_led_thread.start()
+
     # Start bluetoothctl as a subprocess
     process = subprocess.Popen(
         ['bluetoothctl'],
@@ -229,8 +243,7 @@ def manage_bluetooth_connection():
         ("Making device discoverable...", "discoverable on"),
         ("Enabling agent...", "agent on"),
         ("Setting default agent...", "default-agent"),
-        ("Scaling device","scan on")
-
+        ("Starting device scan...", "scan on")
     ]
 
     for message, command in commands:
@@ -287,8 +300,6 @@ def manage_bluetooth_connection():
                 if "Serial Port service registered" in output:
                     print("Serial Port service registered. Waiting for 5 seconds...")
                     time.sleep(5)  # Wait for 5 seconds
-                    #start_rfcomm_server()  # Start the RFCOMM server
-                    # Continue listening for other output
 
             # Show countdown if it has been started
             if countdown_started:
@@ -312,22 +323,23 @@ def manage_bluetooth_connection():
                     print("Ready to execute the Raspberry Pi command...")
                     run_raspberry_pi_command("sudo sdptool add --channel=23 SP")
                     print("Command executed successfully.")
-                    GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED
-                    GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on blue LED (steady light)
-                    start_rfcomm_server()
 
-                    # Now start the RFCOMM server after the command execution
-                   
+                    # Stop Blue LED blinking and turn it to steady light
+                    stop_event.set()
+                    blue_led_thread.join()  # Ensure blinking thread stops
+                    GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on Blue LED (steady light)
+                    
+                    start_rfcomm_server()  # Now start the RFCOMM server
 
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
-        process.terminate()  # Ensure the process is terminated
+        # Ensure the process is terminated
+        process.terminate()
         print("bluetoothctl process terminated.")
         turn_off_bluetooth()  # Call this function to turn off Bluetooth
-        GPIO.output(LED_BLUE, GPIO.LOW)
-        GPIO.output(LED_PIN, GPIO.HIGH)
-        
+        GPIO.output(LED_BLUE, GPIO.LOW)  # Turn off Blue LED
+        GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED steady
         
 def turn_off_bluetooth():
     """Turn off Bluetooth using bluetoothctl."""
@@ -634,13 +646,13 @@ def detect_button_presses():
         # Check for button press on BUTTON_PIN_1
         if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
             print("Initiating Bluetooth connection...")
-            GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
+            GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED (steady)
             manage_bluetooth_connection()  # Your Bluetooth handling function
 
         # Check for button press on BUTTON_PIN_2
         if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
             press_start_time = time.time()  # Record the start time of the press
-            GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
+            GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED (steady)
             while GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
                 time.sleep(0.1)  # Debounce delay while button is pressed
 
@@ -649,7 +661,10 @@ def detect_button_presses():
             # Check if it was a long press (3 seconds)
             if press_duration >= 3:
                 print("Long press detected. Fetching GPS data...")
-                GPIO.output(LED_BLUE, GPIO.LOW)
+                GPIO.output(LED_PIN, GPIO.LOW)  # Start blinking (set to low initially)
+                stop_event.clear()  # Clear stop event to allow blinking
+                green_led_thread = threading.Thread(target=green_led_blink)
+                green_led_thread.start()  # Start blinking thread
                 get_gps_location()  # Call the function to fetch GPS data
             else:
                 print("Short press detected. Turning on A9G module...")
