@@ -217,13 +217,13 @@ def blue_led_blink():
 
 def manage_bluetooth_connection():
     """Start bluetoothctl, manage commands, and handle device connections."""
+    
     # Set initial states for LEDs
     GPIO.output(LED_PIN, GPIO.LOW)   # Turn off green LED initially
     GPIO.output(LED_BLUE, GPIO.LOW)  # Turn off blue LED initially
 
     # Start the Blue LED blinking thread
-    global stop_event
-    stop_event = threading.Event()
+    stop_event.clear()  # Ensure the stop event is cleared before starting the thread
     blue_led_thread = threading.Thread(target=blue_led_blink)
     blue_led_thread.start()
 
@@ -339,7 +339,7 @@ def manage_bluetooth_connection():
         turn_off_bluetooth()  # Call this function to turn off Bluetooth
         GPIO.output(LED_BLUE, GPIO.LOW)  # Turn off Blue LED
         GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED steady
-        
+
 def turn_off_bluetooth():
     """Turn off Bluetooth using bluetoothctl."""
     try:
