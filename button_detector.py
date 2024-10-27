@@ -207,8 +207,7 @@ def blink_led(led_pin, duration=5):
         time.sleep(0.5)
         GPIO.output(led_pin, GPIO.LOW)    # Turn off the LED
         time.sleep(0.5)
-
-                def blue_led_blink():
+def blue_led_blink():
     """Blink the Blue LED while Bluetooth is connecting until stopped."""
     while not stop_event.is_set():
         GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on Blue LED
