@@ -6,6 +6,7 @@ import bluetooth
 import csv
 import sqlite3
 import os
+import threading
 import RPi.GPIO as GPIO
 import serial
 import random
@@ -23,9 +24,11 @@ def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(BUTTON_PIN_1, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 1 as input with pull-up
     GPIO.setup(BUTTON_PIN_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Button 2 as input with pull-up
-    GPIO.setup(LED_PIN, GPIO.OUT)                                 # Green LED as output
+    GPIO.setup(LED_PIN, GPIO.OUT)                                # Green LED as output
     GPIO.setup(LED_BLUE, GPIO.OUT)                               # Blue LED as output
-    GPIO.setup(A9G_POWER_PIN, GPIO.OUT)                         # A9G Power pin as output
+    GPIO.setup(A9G_POWER_PIN, GPIO.OUT)                          # A9G Power pin as output
+    GPIO.output(LED_PIN, GPIO.LOW)  # Ensure LEDs are initially off
+    GPIO.output(LED_BLUE, GPIO.LOW)
 
 def create_database():
     """Create the SQLite database and contacts/messages tables if they don't exist."""
@@ -632,8 +635,8 @@ def detect_button_presses():
         if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
             print("Initiating Bluetooth connection...")
             GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on green LED
-            manage_bluetooth_connection()
-        
+            manage_bluetooth_connection()  # Your Bluetooth handling function
+
         # Check for button press on BUTTON_PIN_2
         if GPIO.input(BUTTON_PIN_2) == GPIO.LOW:
             press_start_time = time.time()  # Record the start time of the press
@@ -655,13 +658,19 @@ def detect_button_presses():
             time.sleep(1)  # Delay to avoid multiple triggers
 
         time.sleep(0.1)  # Small delay to prevent CPU overload
+        
+        
+        
+def green_led_blink():
+    """Blink the Green LED indefinitely until stopped."""
+    while not stop_event.is_set():
+        GPIO.output(LED_PIN, GPIO.HIGH)  # Turn on Green LED
+        time.sleep(0.5)                  # Blink interval
+        GPIO.output(LED_PIN, GPIO.LOW)   # Turn off Green LED
+        time.sleep(0.5)
 
 def get_gps_location():
-    """Fetch GPS location data from the A9G module using AT+LOCATION=2.
-
-    Returns:
-        tuple: A tuple containing latitude and longitude or (None, None) if not found.
-    """
+    """Fetch GPS location data from the A9G module using AT+LOCATION=2."""
     while True:
         print("Attempting to fetch GPS location...")
 
@@ -698,12 +707,22 @@ def get_gps_location():
             gps_read_response = send_command('AT+GPSRD=0')
             print("GPS Read Response After Location Request:", gps_read_response)
 
-            # Now send SMS with retrieved messages and GPS coordinates
+            # Stop green LED blinking by setting the stop event
+            stop_event.set()
+            green_led_thread.join()  # Ensure the thread finishes
+
+            # Now turn on the Blue LED for 10 seconds
+            GPIO.output(LED_BLUE, GPIO.HIGH)  # Turn on Blue LED
+            time.sleep(10)                   # Keep Blue LED on for 10 seconds
+            GPIO.output(LED_BLUE, GPIO.LOW)   # Turn off Blue LED
+
+            # Send SMS with retrieved messages and GPS coordinates
             send_sms_to_all_contacts(latitude, longitude)  # Send SMS after getting location
             return latitude, longitude  # Return valid data
         else:
             print("No valid GPS data found. Retrying...")
             time.sleep(2)  # Wait before retrying
+
 
 def send_sms_to_all_contacts(latitude, longitude):
     """Send all saved messages from the database and then the GPS coordinates to all contacts."""
@@ -747,6 +766,16 @@ def main():
         GPIO.cleanup()           # Clean up GPIO settings
         setup_gpio()             # Set up GPIO pins
         print("System is ready, waiting for button press...")
+
+        # Create a stop event for the blinking LED
+        global stop_event
+        stop_event = threading.Event()
+
+        # Start green LED blinking in a separate thread
+        global green_led_thread
+        green_led_thread = threading.Thread(target=green_led_blink)
+        green_led_thread.start()
+
         GPIO.output(LED_PIN, GPIO.HIGH) 
         GPIO.output(LED_BLUE, GPIO.LOW) 
         detect_button_presses()  # Start detecting button presses
@@ -758,4 +787,3 @@ def main():
 if __name__ == "__main__":
     create_database()  # Ensure the database is set up before running
     main()
-    
