@@ -784,10 +784,6 @@ def main():
         # Create a stop event for the blinking LED
         global stop_event
         stop_event = threading.Event()
-
-        # Create a stop event for the blinking LED
-        global stop_event
-        stop_event = threading.Event()
         
         GPIO.output(LED_PIN, GPIO.HIGH) 
         GPIO.output(LED_BLUE, GPIO.LOW) 
