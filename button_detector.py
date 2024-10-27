@@ -771,11 +771,10 @@ def main():
         global stop_event
         stop_event = threading.Event()
 
-        # Start green LED blinking in a separate thread
-        global green_led_thread
-        green_led_thread = threading.Thread(target=green_led_blink)
-        green_led_thread.start()
-
+        # Create a stop event for the blinking LED
+        global stop_event
+        stop_event = threading.Event()
+        
         GPIO.output(LED_PIN, GPIO.HIGH) 
         GPIO.output(LED_BLUE, GPIO.LOW) 
         detect_button_presses()  # Start detecting button presses
