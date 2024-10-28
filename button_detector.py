@@ -17,6 +17,7 @@ BUTTON_PIN_2 = 24  # Button 2 connected to GPIO 24 (A9G Module)
 LED_PIN = 12       # Green LED connected to GPIO 12
 LED_BLUE = 6       # Blue LED connected to GPIO 6
 A9G_POWER_PIN = 17  # GPIO17
+
 # Initialize Serial connection with A9G module
 ser = serial.Serial('/dev/serial0', baudrate=115200, timeout=1)
 def setup_gpio():
@@ -664,6 +665,7 @@ def check_module_ready():
        
 def detect_button_presses():
     """Detect button presses and handle actions."""
+    global green_led_thread  # Make green_led_thread a global variable
     while True:
         # Check for button press on BUTTON_PIN_1
         if GPIO.input(BUTTON_PIN_1) == GPIO.LOW:
@@ -708,6 +710,7 @@ def green_led_blink():
 
 def get_gps_location():
     """Fetch GPS location data from the A9G module using AT+LOCATION=2."""
+    global green_led_thread  # Ensure access to green_led_thread
     while True:
         print("Attempting to fetch GPS location...")
 
