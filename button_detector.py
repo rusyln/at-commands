@@ -397,6 +397,20 @@ def retrieve_all_contacts():
     # Return contacts as a list of dictionaries
     return [{'name': contact[0], 'number': contact[1]} for contact in contacts]
 
+def retrieve_all_contacts_with_id():
+    """Retrieve all contacts from the contacts table."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    # Query all contacts from the contacts table
+    cursor.execute('SELECT A_ID,ContactName, ContactNumber FROM contacts')
+    contacts = cursor.fetchall()
+
+    conn.close()
+    
+    # Return contacts as a list of dictionaries
+    return [{'A_ID':contact[0],'name': contact[1], 'number': contact[2]} for contact in contacts]
+
 def delete_contact_from_database(contact_number):
     """Delete a contact from the contacts table based on the contact number."""
     conn = sqlite3.connect('contacts.db')
@@ -468,7 +482,7 @@ def start_rfcomm_server():
             
             if recvdata.startswith("sync data"):
                 # Retrieve all contacts and messages and send them to the Android app
-                contacts = retrieve_all_contacts()
+                contacts = retrieve_all_contacts_with_id()
                 messages = retrieve_all_messages()
                 
                 # Sync data as a dictionary
@@ -564,7 +578,7 @@ def start_rfcomm_server_with_new_port(port):
             
             if recvdata == "sync data":
                 # Retrieve all contacts and messages and send them to the Android app
-                contacts = retrieve_all_contacts()
+                contacts = retrieve_all_contacts_with_id()
                 messages = retrieve_all_messages()
                 sync_data = {'contacts': contacts, 'messages': messages}
                 client_sock.send((str(sync_data) + "\nEND_OF_DATA").encode('utf-8'))
