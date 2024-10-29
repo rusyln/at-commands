@@ -96,6 +96,20 @@ def retrieve_all_messages():
     # Extract messages from tuples and return as a list
     return [message[0] for message in messages]
 
+def retrieve_all_messages_with_id():
+    """Retrieve all saved messages from the messages table."""
+    conn = sqlite3.connect('contacts.db')
+    cursor = conn.cursor()
+
+    # Query all messages from the messages table
+    cursor.execute('SELECT ID,MessageText FROM messages')
+    messages = cursor.fetchall()
+
+    conn.close()
+    
+    # Extract messages from tuples and return as a list
+    return [{'id': message[0], 'message': message[1]} for message in messages]
+
 def update_contact_in_database(a_id, new_contact_name, new_contact_number):
     """Update the contact information in the contacts table based on the A_ID."""
     conn = sqlite3.connect('contacts.db')
@@ -483,7 +497,7 @@ def start_rfcomm_server():
             if recvdata.startswith("sync data"):
                 # Retrieve all contacts and messages and send them to the Android app
                 contacts = retrieve_all_contacts_with_id()
-                messages = retrieve_all_messages()
+                messages = retrieve_all_messages_with_id()
                 
                 # Sync data as a dictionary
                 sync_data = {'contacts': contacts, 'messages': messages}
@@ -579,7 +593,7 @@ def start_rfcomm_server_with_new_port(port):
             if recvdata == "sync data":
                 # Retrieve all contacts and messages and send them to the Android app
                 contacts = retrieve_all_contacts_with_id()
-                messages = retrieve_all_messages()
+                messages = retrieve_all_messages_with_id()
                 sync_data = {'contacts': contacts, 'messages': messages}
                 client_sock.send((str(sync_data) + "\nEND_OF_DATA").encode('utf-8'))
                 print("Data synced with the Android app.")
