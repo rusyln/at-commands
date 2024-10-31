@@ -739,7 +739,16 @@ def green_led_blink():
 def get_gps_location():
     """Fetch GPS location data from the A9G module using AT+LOCATION=2."""
     global green_led_thread  # Ensure access to green_led_thread
-    while True:
+    gps_fix_acquired = False
+    
+    # Perform a cold start (reset GPS to get fresh data)
+    gps_reset_response = send_command('AT+GPSRST=1')
+    print("GPS Reset Response:", gps_reset_response)
+    
+    # Add a brief delay to allow reset to take effect
+    time.sleep(2)
+    
+    while not gps_fix_acquired:
         print("Attempting to fetch GPS location...")
 
         # Enable GPS if it's not enabled
@@ -765,12 +774,13 @@ def get_gps_location():
                 try:
                     latitude, longitude = map(float, line.split(','))
                     print(f"Latitude: {latitude}, Longitude: {longitude}")
+                    gps_fix_acquired = True  # Break the loop if we get valid GPS data
                     break  # Exit once valid data is found
                 except ValueError:
                     print(f"Failed to parse GPS data: {line}")
 
         # Check if valid GPS data was found
-        if latitude is not None and longitude is not None:
+        if gps_fix_acquired:
             # Stop GPS reading after getting the location
             gps_read_response = send_command('AT+GPSRD=0')
             print("GPS Read Response After Location Request:", gps_read_response)
