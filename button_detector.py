@@ -438,21 +438,31 @@ def delete_contact_from_database(contact_number):
     print(f"Contact with number '{contact_number}' deleted successfully.")
 
 def update_message_in_database(message_id, new_message_text):
-    """Update an existing message in the messages table."""
+    """Update an existing message in the messages table, or insert if not found."""
     conn = sqlite3.connect('contacts.db')
     cursor = conn.cursor()
 
-    # Update the message text for the specified message ID
+    # Attempt to update the message text for the specified message ID
     cursor.execute('''
         UPDATE messages
-        SET MessageText = ?
-        WHERE ID = ?
+        SET message_text = ?
+        WHERE message_id = ?
     ''', (new_message_text, message_id))
 
+    # Check if any row was updated
+    if cursor.rowcount == 0:
+        # If no rows were updated, insert the new message
+        cursor.execute('''
+            INSERT INTO messages (message_id, message_text)
+            VALUES (?, ?)
+        ''', (message_id, new_message_text))
+        print(f"Message with ID '{message_id}' not found. Inserted as a new record.")
+    else:
+        print(f"Message with ID '{message_id}' updated successfully.")
+
+    # Commit the transaction and close the connection
     conn.commit()
     conn.close()
-    print(f"Message with ID '{message_id}' updated successfully.")
-
 def start_rfcomm_server():
     """Start RFCOMM server on a random channel if needed."""
     print("Starting RFCOMM server on channel 23...")
